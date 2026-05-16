@@ -5,10 +5,10 @@ Claw Cockpit is a local control surface for OpenClaw. It should stay careful by 
 ## Current Safety Boundary
 
 - The browser receives normalized status, not raw OpenClaw output.
-- Command previews are drafts only.
+- Command previews must pass through a server-side catalog before they can run.
 - No browser request can execute an arbitrary shell command.
 - Raw OpenClaw output is hidden unless local debug mode is explicitly enabled.
-- Future run features must use server-side command IDs and allowlisted arguments.
+- Run features use server-side command IDs, allowlisted arguments, strict validation, explicit confirmation, and audit logging.
 
 ## Reporting A Problem
 
@@ -16,4 +16,4 @@ If you find a way for Claw Cockpit to expose secrets, leak raw machine paths une
 
 ## Contributor Rule
 
-When in doubt, keep the UI read-only and add a review step before any action can change OpenClaw.
+When in doubt, keep the UI read-only and add a review step before any action can change OpenClaw. Never add a browser-supplied shell command field.

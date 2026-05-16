@@ -4,6 +4,7 @@
 
 - Keep `/api/overview` stable and redacted.
 - Keep command drafts current with live OpenClaw CLI help.
+- Keep the command catalog narrow, validated, and smoke-tested.
 - Keep the sidebar task-first instead of app-tab-first.
 - Keep smoke checks running against both live OpenClaw and redacted fixtures.
 
@@ -11,8 +12,8 @@
 
 - Add a `docs/fixtures/` guide with captured, redacted examples of OpenClaw output.
 - Add fixture tests for OpenClaw output drift.
-- Persist reviewed setup drafts locally.
 - Add a command catalog returned by the adapter instead of hard-coding command drafts in the UI.
+- Expand runnable catalog coverage for selected warning fixes.
 
 ## Later
 
@@ -26,6 +27,8 @@
 - Public GitHub repo with MIT license, issue templates, PR template, and topics.
 - GitHub Actions validation with fixture-backed smoke testing.
 - Adapter split into sources, parsers, compatibility scoring, and overview normalization.
+- Safe command catalog for reviewed helper and reminder execution.
+- Local reviewed-draft persistence.
 - Focused task pages for warnings, helpers, reminders, runs, and safety drift.
 - README screenshots and first-run walkthrough.
 

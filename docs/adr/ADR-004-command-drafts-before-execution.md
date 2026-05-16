@@ -10,14 +10,14 @@ Claw Cockpit shows OpenClaw command previews. A future run endpoint could become
 
 ## Decision
 
-The UI may show command drafts, but execution is not implemented.
+The UI may show command drafts. Runnable commands must go through the server-side command catalog.
 
-When execution is added, it must use:
+Execution must use:
 
 - server-side command IDs
 - allowlisted `execFile` argument templates
 - strict parameter validation
-- a review nonce or confirmation token
+- explicit user confirmation
 - origin/host checks
 - audit logging
 
@@ -27,4 +27,5 @@ The browser must never send an arbitrary shell command to run.
 
 - Beginner users can review safely before anything changes.
 - Current command previews must match the live CLI shape or be labeled as non-runnable draft wording.
-- Run buttons stay locked until the command catalog and review boundary exist.
+- Run buttons are available only when a draft has a supported command ID.
+- Warning/doctor commands stay preview-only until each action gets its own catalog entry.

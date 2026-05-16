@@ -15,6 +15,13 @@ try {
   await page.getByRole('button', { name: /Review before running/i }).first().click()
   await page.getByLabel('Review setup draft').waitFor()
   await page.getByRole('button', { name: /Close review/i }).click()
+  await page.getByRole('button', { name: /Create helper/i }).click()
+  await page.getByRole('button', { name: /Review before running/i }).first().click()
+  await page.getByRole('button', { name: /Run reviewed command/i }).waitFor()
+  const drawerOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  )
+  await page.getByRole('button', { name: /Close review/i }).click()
 
   const taskPages = [
     [/Fix warnings/i, /Check what needs attention first/i],
@@ -42,10 +49,11 @@ try {
   )
 
   if (errors.length > 0) throw new Error(`Page errors: ${errors.join('; ')}`)
+  if (drawerOverflow) throw new Error('Review drawer has horizontal overflow')
   if (desktopOverflow) throw new Error('Desktop has horizontal overflow')
   if (mobileOverflow) throw new Error('Mobile has horizontal overflow')
 
-  console.log(JSON.stringify({ ok: true, desktopOverflow, mobileOverflow }, null, 2))
+  console.log(JSON.stringify({ ok: true, desktopOverflow, drawerOverflow, mobileOverflow }, null, 2))
 } finally {
   await browser.close()
 }

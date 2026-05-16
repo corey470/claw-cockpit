@@ -27,10 +27,13 @@ Paths:
 - `server/openclawParsers.mjs`
 - `server/compatibilityScoring.mjs`
 - `server/overviewNormalizer.mjs`
+- `server/commandCatalog.mjs`
 
 This is the translator between OpenClaw and the UI. It reads the OpenClaw CLI, gateway, config, and reminder files, then sends the browser a safer summary.
 
 When OpenClaw changes, fix the adapter first.
+
+When a setup action needs to become runnable, add it to the command catalog. Do not make the browser send shell commands.
 
 If you do not have OpenClaw installed, use the fixture path:
 
@@ -44,6 +47,7 @@ Paths:
 
 - `scripts/smoke-overview.mjs`
 - `scripts/smoke-ui.mjs`
+- `scripts/smoke-commands.mjs`
 - `scripts/ci-smoke.mjs`
 
 These checks make sure the cockpit still starts, still reads OpenClaw, and still renders without obvious layout breaks.
@@ -66,3 +70,4 @@ Good next steps are small and concrete:
 - improve one mobile layout issue
 - explain one OpenClaw concept in plain English
 - move one adapter responsibility into a smaller file
+- add one allowlisted command with validation and dry-run coverage

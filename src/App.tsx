@@ -44,11 +44,25 @@ type ReviewDraft = {
   summary: string
   command: string
   nextStep: string
+  commandId?: 'agent.add' | 'cron.add'
+  params?: Record<string, string>
+  status?: 'draft' | 'ready' | 'running' | 'succeeded' | 'failed'
+  resultMessage?: string
 }
 
 type SavedDraft = ReviewDraft & {
   id: string
   savedAt: string
+}
+
+type CommandRunResult = {
+  ok: boolean
+  dryRun?: boolean
+  stdout?: string
+  stderr?: string
+  error?: string
+  preview?: string
+  finishedAt?: string
 }
 
 type AgentSummary = {
@@ -235,23 +249,26 @@ const sectionCopy = {
   settings: {
     label: 'Safety & drift',
     title: 'Keep control without guessing.',
-    detail: 'The cockpit stays read-first until each setup action has a review step.',
+    detail: 'The cockpit stays review-first and runs only allowlisted setup actions.',
   },
 } satisfies Record<SectionId, { label: string; title: string; detail: string }>
 
 const projectTemplates = [
   {
     name: 'Repo helper',
+    helperName: 'repo-helper',
     detail: 'Keeps one Git repo organized, checks status, and writes handoff notes.',
     command: 'openclaw agents add repo-helper --workspace /path/to/repo --non-interactive',
   },
   {
     name: 'Launch checker',
+    helperName: 'launch-checker',
     detail: 'Runs build, env, route, and deployment checks before a release.',
     command: 'openclaw agents add launch-checker --workspace /path/to/repo --non-interactive',
   },
   {
     name: 'Research assistant',
+    helperName: 'research-assistant',
     detail: 'Collects docs, compares sources, and summarizes decisions.',
     command: 'openclaw agents add research-assistant --workspace /path/to/workspace --non-interactive',
   },
@@ -261,18 +278,24 @@ const jobTemplates = [
   {
     name: 'Morning health check',
     schedule: 'Every day at 8:00 AM',
+    cron: '0 8 * * *',
+    message: 'Run OpenClaw health check and summarize blockers',
     command:
       'openclaw cron add --name "Morning health check" --agent main --message "Run OpenClaw health check and summarize blockers" --cron "0 8 * * *" --tz America/New_York',
   },
   {
     name: 'Repo drift watch',
     schedule: 'Every weekday at 9:30 AM',
+    cron: '30 9 * * 1-5',
+    message: 'Check active repo status and list uncommitted work',
     command:
       'openclaw cron add --name "Repo drift watch" --agent main --message "Check active repo status and list uncommitted work" --cron "30 9 * * 1-5" --tz America/New_York',
   },
   {
     name: 'Memory sweep',
     schedule: 'Every Friday afternoon',
+    cron: '0 15 * * 5',
+    message: 'Review helper memories and flag stale notes',
     command:
       'openclaw cron add --name "Memory sweep" --agent main --message "Review helper memories and flag stale notes" --cron "0 15 * * 5" --tz America/New_York',
   },
@@ -326,6 +349,18 @@ function stateLabel(state: HealthState) {
   return 'Unknown'
 }
 
+function quoteArg(value: string) {
+  return /^[A-Za-z0-9_./:-]+$/.test(value) ? value : JSON.stringify(value)
+}
+
+function agentPreview(helperName: string, workspace: string) {
+  return `openclaw agents add ${quoteArg(helperName)} --workspace ${quoteArg(workspace)} --non-interactive`
+}
+
+function cronPreview(reminderName: string, agent: string, message: string, cron: string, timezone: string) {
+  return `openclaw cron add --name ${quoteArg(reminderName)} --agent ${quoteArg(agent)} --message ${quoteArg(message)} --cron ${quoteArg(cron)} --tz ${quoteArg(timezone)}`
+}
+
 function App() {
   const [activeSection, setActiveSection] = useState<SectionId>('chat')
   const [overview, setOverview] = useState<Overview>(emptyOverview)
@@ -334,8 +369,16 @@ function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([openingMessage])
   const [draftMessage, setDraftMessage] = useState('')
   const [reviewDraft, setReviewDraft] = useState<ReviewDraft | null>(null)
-  const [savedDrafts, setSavedDrafts] = useState<SavedDraft[]>([])
+  const [savedDrafts, setSavedDrafts] = useState<SavedDraft[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('claw-cockpit-reviewed-drafts') ?? '[]') as SavedDraft[]
+    } catch {
+      return []
+    }
+  })
   const [reviewNotice, setReviewNotice] = useState('')
+  const [runResult, setRunResult] = useState<CommandRunResult | null>(null)
+  const [isRunningDraft, setIsRunningDraft] = useState(false)
 
   const refresh = async () => {
     setIsLoading(true)
@@ -374,6 +417,10 @@ function App() {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    localStorage.setItem('claw-cockpit-reviewed-drafts', JSON.stringify(savedDrafts.slice(0, 20)))
+  }, [savedDrafts])
 
   const priorityChecks = useMemo(() => {
     const checks = overview.checks.length > 0 ? overview.checks : emptyOverview.checks
@@ -435,6 +482,7 @@ function App() {
 
   const openReview = (draft: ReviewDraft) => {
     setReviewNotice('')
+    setRunResult(null)
     setReviewDraft(draft)
   }
 
@@ -451,6 +499,43 @@ function App() {
     }
     setReviewNotice('Saved as a reviewed draft. Next safest move: choose the real folder, then keep it in review until running is enabled.')
     setReviewDraft(null)
+  }
+
+  const runReviewedDraft = async () => {
+    if (!reviewDraft?.commandId) return
+    setIsRunningDraft(true)
+    setRunResult(null)
+    try {
+      const response = await fetch('/api/commands/run', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          commandId: reviewDraft.commandId,
+          params: reviewDraft.params ?? {},
+          confirm: 'RUN',
+        }),
+      })
+      const result = (await response.json()) as CommandRunResult
+      setRunResult(result)
+      setSavedDrafts((current) => [
+        {
+          ...reviewDraft,
+          id: `${reviewDraft.title}-${Date.now()}`,
+          savedAt: result.finishedAt ? new Date(result.finishedAt).toLocaleTimeString() : 'just now',
+          status: result.ok ? 'succeeded' : 'failed',
+          resultMessage: result.ok ? result.stdout || 'Command completed.' : result.error || 'Command failed.',
+        },
+        ...current,
+      ])
+      setReviewNotice(result.ok ? 'Reviewed command completed. Refreshing local OpenClaw state.' : 'Reviewed command failed. See the drawer for details.')
+      await refresh()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Command request failed.'
+      setRunResult({ ok: false, error: message })
+      setReviewNotice(message)
+    } finally {
+      setIsRunningDraft(false)
+    }
   }
 
   return (
@@ -499,7 +584,7 @@ function App() {
 
         <div className="sidebar-note">
           <ShieldCheck size={18} />
-          <p>Read-only by default. Setup actions start as previews before anything touches OpenClaw.</p>
+          <p>Review-first by default. Runnable setup actions use allowlisted local commands.</p>
         </div>
       </aside>
 
@@ -561,8 +646,11 @@ function App() {
         {reviewDraft && (
           <ReviewDrawer
             draft={reviewDraft}
+            result={runResult}
+            isRunning={isRunningDraft}
             onClose={() => setReviewDraft(null)}
             onMarkReady={markReviewReady}
+            onRun={runReviewedDraft}
           />
         )}
       </main>
@@ -745,10 +833,19 @@ function DashboardPage({
 }) {
   const [selectedProject, setSelectedProject] = useState(projectTemplates[0])
   const [selectedJob, setSelectedJob] = useState(jobTemplates[0])
+  const [helperName, setHelperName] = useState(projectTemplates[0].helperName)
+  const [helperWorkspace, setHelperWorkspace] = useState('/Users/irieagent/Documents/New project 2/claw-cockpit')
+  const [reminderName, setReminderName] = useState(jobTemplates[0].name)
+  const [reminderAgent, setReminderAgent] = useState('main')
+  const [reminderMessage, setReminderMessage] = useState(jobTemplates[0].message)
+  const [reminderCron, setReminderCron] = useState(jobTemplates[0].cron)
+  const [reminderTimezone, setReminderTimezone] = useState('America/New_York')
   const riskChecks = priorityChecks.filter((check) => check.state === 'blocked' || check.state === 'attention')
   const compatibilityRisks = overview.compatibility.checks.filter(
     (check) => check.state === 'blocked' || check.state === 'attention',
   )
+  const helperCommand = agentPreview(helperName, helperWorkspace)
+  const reminderCommand = cronPreview(reminderName, reminderAgent, reminderMessage, reminderCron, reminderTimezone)
 
   if (activeSection === 'doctor') {
     return (
@@ -813,20 +910,38 @@ function DashboardPage({
                   className={template.name === selectedProject.name ? 'template active' : 'template'}
                   key={template.name}
                   type="button"
-                  onClick={() => setSelectedProject(template)}
+                  onClick={() => {
+                    setSelectedProject(template)
+                    setHelperName(template.helperName)
+                  }}
                 >
                   <strong>{template.name}</strong>
                   <span>{template.detail}</span>
                 </button>
               ))}
             </div>
+            <div className="setup-form" aria-label="Helper setup fields">
+              <label>
+                <span>Helper name</span>
+                <input value={helperName} onChange={(event) => setHelperName(event.target.value)} />
+              </label>
+              <label>
+                <span>Workspace folder</span>
+                <input value={helperWorkspace} onChange={(event) => setHelperWorkspace(event.target.value)} />
+              </label>
+            </div>
             <CommandPreview
-              command={selectedProject.command}
+              command={helperCommand}
               onReview={() =>
                 onReviewCommand({
                   title: selectedProject.name,
                   summary: selectedProject.detail,
-                  command: selectedProject.command,
+                  command: helperCommand,
+                  commandId: 'agent.add',
+                  params: {
+                    helperName,
+                    workspace: helperWorkspace,
+                  },
                   nextStep: 'Choose the real repo folder and confirm the helper name before running setup.',
                 })
               }
@@ -868,20 +983,55 @@ function DashboardPage({
                   className={job.name === selectedJob.name ? 'job-option active' : 'job-option'}
                   key={job.name}
                   type="button"
-                  onClick={() => setSelectedJob(job)}
+                  onClick={() => {
+                    setSelectedJob(job)
+                    setReminderName(job.name)
+                    setReminderMessage(job.message)
+                    setReminderCron(job.cron)
+                  }}
                 >
                   <span>{job.name}</span>
                   <small>{job.schedule}</small>
                 </button>
               ))}
             </div>
+            <div className="setup-form" aria-label="Reminder setup fields">
+              <label>
+                <span>Reminder name</span>
+                <input value={reminderName} onChange={(event) => setReminderName(event.target.value)} />
+              </label>
+              <label>
+                <span>Helper</span>
+                <input value={reminderAgent} onChange={(event) => setReminderAgent(event.target.value)} />
+              </label>
+              <label className="full-field">
+                <span>Message</span>
+                <input value={reminderMessage} onChange={(event) => setReminderMessage(event.target.value)} />
+              </label>
+              <label>
+                <span>Cron</span>
+                <input value={reminderCron} onChange={(event) => setReminderCron(event.target.value)} />
+              </label>
+              <label>
+                <span>Timezone</span>
+                <input value={reminderTimezone} onChange={(event) => setReminderTimezone(event.target.value)} />
+              </label>
+            </div>
             <CommandPreview
-              command={selectedJob.command}
+              command={reminderCommand}
               onReview={() =>
                 onReviewCommand({
-                  title: selectedJob.name,
+                  title: reminderName,
                   summary: `Schedule: ${selectedJob.schedule}.`,
-                  command: selectedJob.command,
+                  command: reminderCommand,
+                  commandId: 'cron.add',
+                  params: {
+                    reminderName,
+                    agent: reminderAgent,
+                    message: reminderMessage,
+                    cron: reminderCron,
+                    timezone: reminderTimezone,
+                  },
                   nextStep: 'Confirm the time, timezone, and summary wording before creating the job.',
                 })
               }
@@ -980,7 +1130,7 @@ function DashboardPage({
               </div>
               <div>
                 <strong>Never run raw browser commands</strong>
-                <p>Future execution must use server-side command IDs and a review step.</p>
+                <p>Execution must use server-side command IDs, validated fields, and a review step.</p>
               </div>
             </div>
             {compatibilityRisks.length > 0 && (
@@ -1087,7 +1237,10 @@ function DashboardPage({
                 className={template.name === selectedProject.name ? 'template active' : 'template'}
                 key={template.name}
                 type="button"
-                onClick={() => setSelectedProject(template)}
+                onClick={() => {
+                  setSelectedProject(template)
+                  setHelperName(template.helperName)
+                }}
               >
                 <strong>{template.name}</strong>
                 <span>{template.detail}</span>
@@ -1095,12 +1248,17 @@ function DashboardPage({
             ))}
           </div>
           <CommandPreview
-            command={selectedProject.command}
+            command={helperCommand}
             onReview={() =>
               onReviewCommand({
                 title: selectedProject.name,
                 summary: selectedProject.detail,
-                command: selectedProject.command,
+                command: helperCommand,
+                commandId: 'agent.add',
+                params: {
+                  helperName,
+                  workspace: helperWorkspace,
+                },
                 nextStep: 'Choose the real repo folder and confirm the helper name before running setup.',
               })
             }
@@ -1119,7 +1277,12 @@ function DashboardPage({
                 className={job.name === selectedJob.name ? 'job-option active' : 'job-option'}
                 key={job.name}
                 type="button"
-                onClick={() => setSelectedJob(job)}
+                onClick={() => {
+                  setSelectedJob(job)
+                  setReminderName(job.name)
+                  setReminderMessage(job.message)
+                  setReminderCron(job.cron)
+                }}
               >
                 <span>{job.name}</span>
                 <small>{job.schedule}</small>
@@ -1127,12 +1290,20 @@ function DashboardPage({
             ))}
           </div>
           <CommandPreview
-            command={selectedJob.command}
+            command={reminderCommand}
             onReview={() =>
               onReviewCommand({
-                title: selectedJob.name,
+                title: reminderName,
                 summary: `Schedule: ${selectedJob.schedule}.`,
-                command: selectedJob.command,
+                command: reminderCommand,
+                commandId: 'cron.add',
+                params: {
+                  reminderName,
+                  agent: reminderAgent,
+                  message: reminderMessage,
+                  cron: reminderCron,
+                  timezone: reminderTimezone,
+                },
                 nextStep: 'Confirm the time, timezone, and summary wording before creating the job.',
               })
             }
@@ -1290,13 +1461,20 @@ function PanelHeader({
 
 function ReviewDrawer({
   draft,
+  result,
+  isRunning,
   onClose,
   onMarkReady,
+  onRun,
 }: {
   draft: ReviewDraft
+  result: CommandRunResult | null
+  isRunning: boolean
   onClose: () => void
   onMarkReady: () => void
+  onRun: () => void
 }) {
+  const canRun = Boolean(draft.commandId)
   return (
     <div className="review-backdrop" role="presentation">
       <aside className="review-drawer" aria-label="Review setup draft">
@@ -1323,11 +1501,11 @@ function ReviewDrawer({
         <div className="review-checks" aria-label="Safety checks">
           <div>
             <CheckCircle2 size={16} />
-            <span>No command runs from this screen yet.</span>
+            <span>{canRun ? 'This command uses a server-side allowlisted template.' : 'This preview is not runnable yet.'}</span>
           </div>
           <div>
             <CheckCircle2 size={16} />
-            <span>You can review the exact current CLI-shaped command first.</span>
+            <span>The browser sends a command ID and validated fields, not raw shell text.</span>
           </div>
           <div>
             <CheckCircle2 size={16} />
@@ -1335,12 +1513,23 @@ function ReviewDrawer({
           </div>
         </div>
 
+        {result && (
+          <div className={result.ok ? 'run-result success' : 'run-result failed'} role="status">
+            <strong>{result.ok ? 'Command finished' : 'Command did not finish'}</strong>
+            <p>{result.ok ? result.stdout || 'OpenClaw accepted the command.' : result.error || result.stderr || 'OpenClaw returned an error.'}</p>
+          </div>
+        )}
+
         <div className="review-actions">
           <button type="button" className="secondary-action" onClick={onClose}>
             Keep editing
           </button>
           <button type="button" className="primary-action" onClick={onMarkReady}>
             Save reviewed draft
+          </button>
+          <button type="button" className="run-action" onClick={onRun} disabled={!canRun || isRunning}>
+            <Play size={15} />
+            {isRunning ? 'Running...' : canRun ? 'Run reviewed command' : 'Preview only'}
           </button>
         </div>
       </aside>

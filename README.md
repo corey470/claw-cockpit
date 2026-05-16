@@ -23,6 +23,7 @@ Make OpenClaw easier to operate without hiding the real system:
 - plan setup changes before anything runs
 - translate warnings into next steps
 - draft helper and reminder commands from current CLI shape
+- run reviewed helper/reminder setup through server-side allowlisted commands
 - show history, compatibility, and safety signals
 - keep the adapter open enough for contributors to extend
 
@@ -71,7 +72,11 @@ Command previews open a review drawer before anything can become executable. The
 - the exact command text
 - what still needs to be confirmed
 
-Reviewed commands are saved as local setup drafts in the planning flow. They are not persisted or executed yet.
+Reviewed commands are saved as local setup drafts in the planning flow.
+
+Helper and reminder drafts can be run from the review drawer after the command passes the server-side catalog. Warning/doctor commands stay preview-only until each one has its own allowlisted template.
+
+![Claw Cockpit review and run drawer](docs/assets/claw-cockpit-review-run.png)
 
 ## Run Locally
 
@@ -99,11 +104,12 @@ GitHub Actions runs `npm run ci:smoke` against redacted fixtures, so contributor
 
 ## Safety Model
 
-The first version is read-first:
+The default posture is review-first:
 
 - `/api/overview` reads OpenClaw status, gateway probe output, `openclaw.json`, and cron jobs.
-- setup cards show command previews only.
-- future write actions should require an explicit review screen before execution.
+- setup cards show command previews first.
+- `/api/commands/run` accepts only server-side command IDs, validated fields, and explicit confirmation.
+- command smoke tests use dry-run mode so CI never changes a live OpenClaw install.
 
 ## Open Source Posture
 
@@ -135,6 +141,18 @@ Architecture decisions live in `docs/adr/`:
 - overview contract versioning
 - raw signal redaction
 - command drafts before execution
+
+## Current Readiness
+
+Claw Cockpit is now ready for real local work as a review-first OpenClaw cockpit:
+
+- status, warnings, helpers, reminders, sessions, and drift are readable
+- helper and reminder setup can be reviewed and run through the safe catalog
+- command runs are audit-logged under the local OpenClaw home
+- GitHub Actions validates the app with fixtures
+- live local smoke checks validate your machine path
+
+The remaining gap before calling it fully complete is broad command coverage: warning fixes, plugin installs, and more OpenClaw maintenance actions need their own allowlisted templates before they become runnable.
 
 ## Irie Product Philosophy
 

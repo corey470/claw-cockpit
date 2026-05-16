@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "smoke:overview": "node scripts/smoke-overview.mjs",
     "smoke:ui": "node scripts/smoke-ui.mjs",
+    "smoke:commands": "node scripts/smoke-commands.mjs",
     "ci:smoke": "node scripts/ci-smoke.mjs"
   },
   "dependencies": {

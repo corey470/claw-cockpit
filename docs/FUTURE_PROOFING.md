@@ -46,7 +46,8 @@ When any of these change, the UI should show a drift warning instead of pretendi
 - Do not return raw OpenClaw command output to the browser unless a local debug flag is explicitly enabled and redaction runs first.
 - Treat security audit warnings as product signals, not terminal noise.
 - Version the adapter contract and fail smoke checks when the schema changes.
-- Future write/run endpoints must use server-side command IDs and allowlisted `execFile` argument templates. Never execute command strings sent from the browser.
+- Write/run endpoints must use server-side command IDs and allowlisted `execFile` argument templates. Never execute command strings sent from the browser.
+- Every new runnable command needs fixture or dry-run smoke coverage.
 
 ## Smoke Check
 
@@ -79,5 +80,6 @@ Keep beginner words visible first:
 - Setup Check = doctor/status/security readout
 - History = recent sessions/runs
 - Review = safe command preview
+- Run = reviewed command ID plus validated fields
 
 Technical names can appear in command previews and source labels.

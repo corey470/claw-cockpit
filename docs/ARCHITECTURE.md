@@ -18,15 +18,17 @@ Browser UI
 - `server/openclawParsers.mjs` turns CLI/config text into smaller facts.
 - `server/compatibilityScoring.mjs` scores drift, security, and command-surface risk.
 - `server/overviewNormalizer.mjs` returns the browser-safe overview contract.
+- `server/commandCatalog.mjs` owns runnable command IDs, validation, dry-run mode, execution, and audit logs.
 - `scripts/smoke-overview.mjs` checks the adapter contract.
 - `scripts/smoke-ui.mjs` checks desktop/mobile rendering and the review drawer.
+- `scripts/smoke-commands.mjs` checks catalog preview/run behavior without changing live state.
 - `scripts/ci-smoke.mjs` starts fixture-backed adapter and Vite servers for GitHub Actions.
 
 ## Important Boundaries
 
 - The browser should receive normalized cockpit data, not raw OpenClaw output.
-- Command previews are drafts, not execution requests.
-- Future execution must use a server-side command catalog.
+- Command previews become execution requests only when they carry a supported server-side command ID.
+- Execution uses `execFile`, validated arguments, local origin checks, explicit confirmation, and audit logging.
 - OpenClaw CLI output should be treated as a changing source, not a permanent API.
 
 ## Adapter Split
@@ -37,7 +39,7 @@ The adapter is split into:
 - `openclawParsers`: text and JSON parsing
 - `overviewNormalizer`: beginner-facing output
 - `compatibilityScoring`: drift and safety checks
-- future `commandCatalog`: capability-backed command drafts
+- `commandCatalog`: capability-backed command drafts and safe execution
 
 That split keeps OpenClaw churn away from the UI.
 
