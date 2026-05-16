@@ -4,16 +4,14 @@
 
 - Keep `/api/overview` stable and redacted.
 - Keep command drafts current with live OpenClaw CLI help.
-- Make the sidebar task-first instead of app-tab-first.
-- Add smoke checks for UI rendering and adapter contract.
+- Keep the sidebar task-first instead of app-tab-first.
+- Keep smoke checks running against both live OpenClaw and redacted fixtures.
 
 ## Next
 
-- Split `server/index.mjs` into source readers, parsers, normalizers, and compatibility scoring.
 - Add a `docs/fixtures/` guide with captured, redacted examples of OpenClaw output.
 - Add fixture tests for OpenClaw output drift.
 - Persist reviewed setup drafts locally.
-- Make `Fix warnings`, `Create helper`, `Add reminder`, `Review runs`, and `Safety & drift` true focused views.
 - Add a command catalog returned by the adapter instead of hard-coding command drafts in the UI.
 
 ## Later
@@ -22,6 +20,14 @@
 - Add import/export for cockpit setup drafts.
 - Add plugin-specific compatibility checks.
 - Add a public documentation site for non-expert OpenClaw operators.
+
+## Done
+
+- Public GitHub repo with MIT license, issue templates, PR template, and topics.
+- GitHub Actions validation with fixture-backed smoke testing.
+- Adapter split into sources, parsers, compatibility scoring, and overview normalization.
+- Focused task pages for warnings, helpers, reminders, runs, and safety drift.
+- README screenshots and first-run walkthrough.
 
 ## Not A Goal
 

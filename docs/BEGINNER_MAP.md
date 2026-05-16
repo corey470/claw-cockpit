@@ -20,11 +20,23 @@ The browser should not know how to run OpenClaw commands directly.
 
 ## 2. The Local Adapter
 
-Path: `server/index.mjs`
+Paths:
+
+- `server/index.mjs`
+- `server/openclawSources.mjs`
+- `server/openclawParsers.mjs`
+- `server/compatibilityScoring.mjs`
+- `server/overviewNormalizer.mjs`
 
 This is the translator between OpenClaw and the UI. It reads the OpenClaw CLI, gateway, config, and reminder files, then sends the browser a safer summary.
 
 When OpenClaw changes, fix the adapter first.
+
+If you do not have OpenClaw installed, use the fixture path:
+
+```bash
+npm run ci:smoke
+```
 
 ## 3. The Smoke Checks
 
@@ -32,6 +44,7 @@ Paths:
 
 - `scripts/smoke-overview.mjs`
 - `scripts/smoke-ui.mjs`
+- `scripts/ci-smoke.mjs`
 
 These checks make sure the cockpit still starts, still reads OpenClaw, and still renders without obvious layout breaks.
 

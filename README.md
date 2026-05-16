@@ -2,6 +2,8 @@
 
 Task-focused local cockpit for OpenClaw.
 
+[![Validate](https://github.com/corey470/claw-cockpit/actions/workflows/validate.yml/badge.svg)](https://github.com/corey470/claw-cockpit/actions/workflows/validate.yml)
+
 Claw Cockpit is built for people who can get OpenClaw running, but do not want to live inside raw config, changing command flags, and scattered setup warnings. It does not depend on OpenClaw's own dashboard internals. Instead, it talks to the stable things operators already trust:
 
 - the `openclaw` CLI
@@ -10,6 +12,8 @@ Claw Cockpit is built for people who can get OpenClaw running, but do not want t
 - plain preview commands before any setup action runs
 
 This is intentionally a beginner-readable repo. The code should be plain enough for a non-expert developer to follow, while still having real seams for contributors to extend.
+
+![Claw Cockpit plan change screen](docs/assets/claw-cockpit-plan-change.png)
 
 ## Product Goal
 
@@ -47,6 +51,18 @@ The planner lets a beginner say what setup change they want in normal language, 
 
 For now, replies are local guide rails only. They do not call a helper or change OpenClaw yet.
 
+## First Run Walkthrough
+
+1. Start OpenClaw normally.
+2. Run Claw Cockpit with `npm run dev`.
+3. Use `Open OpenClaw Chat` for normal agent conversations.
+4. Use `Plan a change` when you want a setup command drafted in plain English.
+5. Use `Fix warnings` when OpenClaw reports something confusing.
+6. Use `Create helper` or `Add reminder` to draft setup work before anything runs.
+7. Use `Safety & drift` after OpenClaw updates to see what the adapter is worried about.
+
+![Claw Cockpit warning screen](docs/assets/claw-cockpit-fix-warnings.png)
+
 ## Review Step
 
 Command previews open a review drawer before anything can become executable. The drawer explains:
@@ -79,6 +95,8 @@ npm run smoke:overview
 npm run smoke:ui
 ```
 
+GitHub Actions runs `npm run ci:smoke` against redacted fixtures, so contributors can validate the app even if they do not have OpenClaw installed locally.
+
 ## Safety Model
 
 The first version is read-first:
@@ -108,6 +126,8 @@ The best contribution keeps both sides true: easier for beginners, sturdier for 
 This repo should grow as an adapter-first cockpit, not as a clone of the fast-changing OpenClaw UI. When OpenClaw changes, update the adapter parser or command mapping while keeping the beginner workflow stable.
 
 See `docs/FUTURE_PROOFING.md` for the compatibility contract, drift risks, and smoke-check expectations.
+
+The adapter is split into source readers, parsers, compatibility scoring, and overview normalization. Start with `docs/BEGINNER_MAP.md` if you are new to the codebase.
 
 Architecture decisions live in `docs/adr/`:
 

@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "smoke:overview": "node scripts/smoke-overview.mjs",
-    "smoke:ui": "node scripts/smoke-ui.mjs"
+    "smoke:ui": "node scripts/smoke-ui.mjs",
+    "ci:smoke": "node scripts/ci-smoke.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.16.0",

@@ -14,6 +14,20 @@ try {
   await page.getByRole('button', { name: /Set up a helper for this repo/i }).click()
   await page.getByRole('button', { name: /Review before running/i }).first().click()
   await page.getByLabel('Review setup draft').waitFor()
+  await page.getByRole('button', { name: /Close review/i }).click()
+
+  const taskPages = [
+    [/Fix warnings/i, /Check what needs attention first/i],
+    [/Create helper/i, /Set up a helper without touching config/i],
+    [/Add reminder/i, /Turn reminders into safe scheduled work/i],
+    [/Review runs/i, /See what happened and what changed/i],
+    [/Safety & drift/i, /Keep control without guessing/i],
+  ]
+
+  for (const [buttonName, headingName] of taskPages) {
+    await page.getByRole('button', { name: buttonName }).click()
+    await page.getByRole('heading', { name: headingName }).waitFor()
+  }
 
   const desktopOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,

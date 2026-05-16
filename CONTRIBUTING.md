@@ -38,6 +38,12 @@ npm run smoke:overview
 npm run smoke:ui
 ```
 
+If you do not have OpenClaw installed, run the fixture-backed CI smoke check:
+
+```bash
+npm run ci:smoke
+```
+
 If OpenClaw drift is intentionally being inspected and compatibility is blocked, document why before using:
 
 ```bash

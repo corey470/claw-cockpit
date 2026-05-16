@@ -1,0 +1,14 @@
+[
+  {
+    "id": "morning-health",
+    "name": "Morning health check",
+    "cron": "0 8 * * *",
+    "status": "configured"
+  },
+  {
+    "id": "repo-drift",
+    "name": "Repo drift watch",
+    "cron": "30 9 * * 1-5",
+    "status": "configured"
+  }
+]

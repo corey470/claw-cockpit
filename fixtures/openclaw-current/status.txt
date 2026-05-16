@@ -1,0 +1,17 @@
+Overview
+│ Version              │ app 2026.5.16-beta.2 │
+│ Channel              │ beta (fixture)        │
+│ Update               │ fixture up to date    │
+│ Agents               │ 3 configured          │
+│ Sessions             │ 2 active              │
+│ Gateway              │ local                 │
+│ Gateway service      │ LaunchAgent installed · loaded · running │
+│ Tailscale exposure   │ off                   │
+│ Plugin compatibility │ none                  │
+
+Security audit
+Summary: 0 critical · 1 warn · 1 info
+
+Sessions
+│ main         │ agent:main        │ 4m ago │ openai/gpt-5.4 │ codex │ 12k │
+│ repo-helper  │ agent:repo-helper │ 9m ago │ openai/gpt-5.4 │ codex │ 8k  │

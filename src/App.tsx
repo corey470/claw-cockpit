@@ -745,6 +745,255 @@ function DashboardPage({
 }) {
   const [selectedProject, setSelectedProject] = useState(projectTemplates[0])
   const [selectedJob, setSelectedJob] = useState(jobTemplates[0])
+  const riskChecks = priorityChecks.filter((check) => check.state === 'blocked' || check.state === 'attention')
+  const compatibilityRisks = overview.compatibility.checks.filter(
+    (check) => check.state === 'blocked' || check.state === 'attention',
+  )
+
+  if (activeSection === 'doctor') {
+    return (
+      <>
+        <ProofStrip overview={overview} />
+        <section className="task-grid two-column">
+          <article className="panel wide-panel">
+            <PanelHeader icon={<Wrench size={19} />} title="Warnings to fix first" action={`${riskChecks.length} open`} />
+            <p className="panel-copy">
+              Start here when OpenClaw feels confusing. Each warning is translated into what it means, why it matters,
+              and the safest next command to review.
+            </p>
+            <div className="check-list">
+              {priorityChecks.map((check) => (
+                <div className="check-row" key={check.id}>
+                  <span className={`check-dot ${check.state}`} />
+                  <div>
+                    <strong>{check.title}</strong>
+                    <p>{check.detail}</p>
+                    {check.command && <code>{check.command}</code>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </article>
+          <article className="panel">
+            <PanelHeader icon={<ListChecks size={19} />} title="Fix order" action="Plain English" />
+            <div className="plain-steps">
+              <div>
+                <strong>1. Keep the gateway reachable</strong>
+                <p>If OpenClaw cannot answer locally, pause setup work and repair that first.</p>
+              </div>
+              <div>
+                <strong>2. Review auth and exposure</strong>
+                <p>Local-only is safest for a beginner cockpit. Anything exposed deserves a fresh check.</p>
+              </div>
+              <div>
+                <strong>3. Treat beta updates as drift</strong>
+                <p>When OpenClaw changes, update fixtures and adapter parsing before changing the UI.</p>
+              </div>
+            </div>
+          </article>
+        </section>
+      </>
+    )
+  }
+
+  if (activeSection === 'projects') {
+    return (
+      <>
+        <ProofStrip overview={overview} />
+        <section className="task-grid two-column">
+          <article className="panel wide-panel">
+            <PanelHeader icon={<FolderGit2 size={19} />} title="Create a helper" action="Review required" />
+            <p className="panel-copy">
+              A helper is an OpenClaw agent with a clear folder and job. Pick a starter, then review the exact command
+              before setup becomes runnable.
+            </p>
+            <div className="template-list">
+              {projectTemplates.map((template) => (
+                <button
+                  className={template.name === selectedProject.name ? 'template active' : 'template'}
+                  key={template.name}
+                  type="button"
+                  onClick={() => setSelectedProject(template)}
+                >
+                  <strong>{template.name}</strong>
+                  <span>{template.detail}</span>
+                </button>
+              ))}
+            </div>
+            <CommandPreview
+              command={selectedProject.command}
+              onReview={() =>
+                onReviewCommand({
+                  title: selectedProject.name,
+                  summary: selectedProject.detail,
+                  command: selectedProject.command,
+                  nextStep: 'Choose the real repo folder and confirm the helper name before running setup.',
+                })
+              }
+            />
+          </article>
+          <article className="panel">
+            <PanelHeader icon={<Bot size={19} />} title="Current helpers" action={`${overview.counts.agents} total`} />
+            <div className="table-list">
+              {overview.agents.slice(0, 8).map((agent) => (
+                <div className="agent-row" key={agent.id}>
+                  <div>
+                    <strong>{agent.name || agent.id}</strong>
+                    <span>{agent.workspace}</span>
+                  </div>
+                  <small>{agent.model}</small>
+                </div>
+              ))}
+            </div>
+          </article>
+        </section>
+      </>
+    )
+  }
+
+  if (activeSection === 'jobs') {
+    return (
+      <>
+        <ProofStrip overview={overview} />
+        <section className="task-grid two-column">
+          <article className="panel wide-panel">
+            <PanelHeader icon={<Clock3 size={19} />} title="Add a reminder" action="Draft first" />
+            <p className="panel-copy">
+              A reminder is scheduled OpenClaw work. Keep the wording readable, confirm the timezone, then save it as
+              a reviewed draft before anything creates a cron job.
+            </p>
+            <div className="job-selector">
+              {jobTemplates.map((job) => (
+                <button
+                  className={job.name === selectedJob.name ? 'job-option active' : 'job-option'}
+                  key={job.name}
+                  type="button"
+                  onClick={() => setSelectedJob(job)}
+                >
+                  <span>{job.name}</span>
+                  <small>{job.schedule}</small>
+                </button>
+              ))}
+            </div>
+            <CommandPreview
+              command={selectedJob.command}
+              onReview={() =>
+                onReviewCommand({
+                  title: selectedJob.name,
+                  summary: `Schedule: ${selectedJob.schedule}.`,
+                  command: selectedJob.command,
+                  nextStep: 'Confirm the time, timezone, and summary wording before creating the job.',
+                })
+              }
+            />
+          </article>
+          <article className="panel">
+            <PanelHeader icon={<Clock3 size={19} />} title="Existing reminders" action={`${overview.counts.jobs} found`} />
+            <div className="table-list">
+              {overview.jobs.length === 0 ? (
+                <div className="empty-state">No scheduled work was found in the local OpenClaw registry.</div>
+              ) : (
+                overview.jobs.slice(0, 8).map((job) => (
+                  <div className="agent-row" key={job.id}>
+                    <div>
+                      <strong>{job.title}</strong>
+                      <span>{job.schedule}</span>
+                    </div>
+                    <small>{job.status}</small>
+                  </div>
+                ))
+              )}
+            </div>
+          </article>
+        </section>
+      </>
+    )
+  }
+
+  if (activeSection === 'runs') {
+    return (
+      <>
+        <ProofStrip overview={overview} />
+        <section className="task-grid">
+          <article className="panel wide-panel">
+            <PanelHeader icon={<Activity size={19} />} title="Recent OpenClaw runs" action="Local proof" />
+            <p className="panel-copy">
+              Use this page when you want proof of what OpenClaw has been doing before you ask it for more work.
+            </p>
+            <div className="run-table">
+              <div className="run-head">
+                <span>Session</span>
+                <span>Model</span>
+                <span>Runtime</span>
+                <span>Age</span>
+              </div>
+              {overview.sessions.slice(0, 10).map((session) => (
+                <div className="run-row" key={`${session.key}-${session.age}`}>
+                  <span>{session.key}</span>
+                  <span>{session.model}</span>
+                  <span>{session.runtime}</span>
+                  <span>{session.age}</span>
+                </div>
+              ))}
+            </div>
+          </article>
+        </section>
+      </>
+    )
+  }
+
+  if (activeSection === 'settings') {
+    return (
+      <>
+        <ProofStrip overview={overview} />
+        <section className="task-grid two-column">
+          <article className="panel wide-panel">
+            <PanelHeader
+              icon={<ShieldCheck size={19} />}
+              title="Safety and drift signals"
+              action={stateLabel(overview.compatibility.posture)}
+            />
+            <p className="panel-copy">{overview.compatibility.summary}</p>
+            <div className="compat-list">
+              {overview.compatibility.checks.map((check) => (
+                <div className="compat-row" key={check.id}>
+                  <span className={`check-dot ${check.state}`} />
+                  <div>
+                    <strong>{check.title}</strong>
+                    <p>{check.detail}</p>
+                    <small>{check.source}</small>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </article>
+          <article className="panel">
+            <PanelHeader icon={<ClipboardList size={19} />} title="Contributor rule" action="Future-proof" />
+            <div className="plain-steps">
+              <div>
+                <strong>Read from adapters</strong>
+                <p>OpenClaw output changes quickly. Keep parsing and compatibility checks outside the UI.</p>
+              </div>
+              <div>
+                <strong>Fixture every drift</strong>
+                <p>When a command changes, add a redacted fixture so GitHub Actions protects the fix.</p>
+              </div>
+              <div>
+                <strong>Never run raw browser commands</strong>
+                <p>Future execution must use server-side command IDs and a review step.</p>
+              </div>
+            </div>
+            {compatibilityRisks.length > 0 && (
+              <button className="section-jump" type="button" onClick={() => onNavigate('doctor')}>
+                <Wrench size={16} />
+                Fix warnings first
+              </button>
+            )}
+          </article>
+        </section>
+      </>
+    )
+  }
 
   return (
     <>

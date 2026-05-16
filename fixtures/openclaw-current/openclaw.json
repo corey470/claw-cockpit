@@ -1,0 +1,30 @@
+{
+  "agents": {
+    "defaults": {
+      "workspace": "/Users/example/.openclaw/workspace",
+      "model": {
+        "primary": "openai/gpt-5.4"
+      }
+    },
+    "list": [
+      {
+        "id": "main",
+        "name": "main",
+        "workspace": "/Users/example/.openclaw/workspace",
+        "model": "openai/gpt-5.4"
+      },
+      {
+        "id": "repo-helper",
+        "name": "repo-helper",
+        "workspace": "/Users/example/projects/claw-cockpit",
+        "model": "openai/gpt-5.4"
+      },
+      {
+        "id": "launch-checker",
+        "name": "launch-checker",
+        "workspace": "/Users/example/projects/product",
+        "model": "openai/gpt-5.4"
+      }
+    ]
+  }
+}

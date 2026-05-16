@@ -1,12 +1,11 @@
 const url = process.env.COCKPIT_OVERVIEW_URL ?? 'http://127.0.0.1:4314/api/overview'
 const allowDrift = process.argv.includes('--allow-drift') || process.env.COCKPIT_ALLOW_DRIFT === '1'
 
-const response = await fetch(url)
-if (!response.ok) {
-  throw new Error(`Overview returned HTTP ${response.status}`)
+let overview = await fetchOverview()
+if (!allowDrift && overview?.compatibility?.posture === 'blocked') {
+  await new Promise((resolve) => setTimeout(resolve, 1200))
+  overview = await fetchOverview()
 }
-
-const overview = await response.json()
 const failures = []
 
 if (!overview?.generatedAt) failures.push('generatedAt missing')
@@ -49,3 +48,12 @@ console.log(
     2,
   ),
 )
+
+async function fetchOverview() {
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`Overview returned HTTP ${response.status}`)
+  }
+
+  return response.json()
+}

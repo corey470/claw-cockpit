@@ -1,0 +1,6 @@
+Usage: openclaw agents <command>
+
+Commands:
+  list
+  add
+  remove

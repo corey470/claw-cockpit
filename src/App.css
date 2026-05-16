@@ -984,6 +984,21 @@ h2 {
   align-items: start;
 }
 
+.task-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.task-grid.two-column {
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+}
+
+.wide-panel {
+  min-height: 280px;
+}
+
 .bottom-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
@@ -1297,6 +1312,33 @@ code {
   font-size: 11px;
 }
 
+.plain-steps {
+  display: grid;
+  gap: 10px;
+}
+
+.plain-steps div,
+.empty-state {
+  border: 1px solid #eef2f7;
+  border-radius: 8px;
+  padding: 11px;
+  background: #fbfdff;
+}
+
+.plain-steps strong {
+  display: block;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.plain-steps p,
+.empty-state {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 @media (max-width: 1180px) {
   .app-shell {
     grid-template-columns: 84px minmax(0, 1fr);
@@ -1329,7 +1371,8 @@ code {
   .health-strip,
   .work-grid,
   .bottom-grid,
-  .chat-layout {
+  .chat-layout,
+  .task-grid.two-column {
     grid-template-columns: 1fr 1fr;
   }
 
@@ -1419,7 +1462,8 @@ code {
   .health-strip,
   .work-grid,
   .bottom-grid,
-  .chat-layout {
+  .chat-layout,
+  .task-grid.two-column {
     grid-template-columns: 1fr;
   }
 

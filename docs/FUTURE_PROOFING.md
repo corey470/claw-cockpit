@@ -56,6 +56,12 @@ Run this while the dev server is up:
 npm run smoke:overview
 ```
 
+Run this when OpenClaw is not available, such as in GitHub Actions:
+
+```bash
+npm run ci:smoke
+```
+
 It checks that `/api/overview` still returns the expected compatibility contract:
 
 - gateway state

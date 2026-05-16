@@ -1,0 +1,11 @@
+Usage: openclaw <command>
+
+Commands:
+  status
+  doctor
+  gateway
+  agents
+  cron
+  plugins
+  security
+  models
