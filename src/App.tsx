@@ -927,8 +927,8 @@ function DashboardPage({
                 <span>Runtime</span>
                 <span>Age</span>
               </div>
-              {overview.sessions.slice(0, 10).map((session) => (
-                <div className="run-row" key={`${session.key}-${session.age}`}>
+              {overview.sessions.slice(0, 10).map((session, index) => (
+                <div className="run-row" key={`${session.key}-${session.age}-${index}`}>
                   <span>{session.key}</span>
                   <span>{session.model}</span>
                   <span>{session.runtime}</span>
@@ -1165,8 +1165,8 @@ function DashboardPage({
               <span>Runtime</span>
               <span>Age</span>
             </div>
-            {overview.sessions.slice(0, 5).map((session) => (
-              <div className="run-row" key={`${session.key}-${session.age}`}>
+            {overview.sessions.slice(0, 5).map((session, index) => (
+              <div className="run-row" key={`${session.key}-${session.age}-${index}`}>
                 <span>{session.key}</span>
                 <span>{session.model}</span>
                 <span>{session.runtime}</span>
