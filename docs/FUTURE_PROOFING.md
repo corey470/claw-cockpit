@@ -19,6 +19,7 @@ Use these as the adapter contract before depending on OpenClaw UI internals:
 - `openclaw cron --help`
 - `~/.openclaw/openclaw.json`
 - `~/.openclaw/cron/jobs.json`
+- local skill folders such as `~/.codex/skills` and `~/.openclaw/skills`
 
 When any of these change, the UI should show a drift warning instead of pretending setup is safe.
 
@@ -31,6 +32,7 @@ When any of these change, the UI should show a drift warning instead of pretendi
 - Provider and model naming may change.
 - Harness names can change, as seen with Codex harness registration.
 - Plugins can become required, optional, renamed, or unpinned.
+- Skill folder conventions can drift between OpenClaw, Codex, and plugin-provided skills.
 - Security posture can change when the Control UI is exposed beyond localhost.
 - Beta channel updates may change behavior several times a day.
 
@@ -48,6 +50,7 @@ When any of these change, the UI should show a drift warning instead of pretendi
 - Version the adapter contract and fail smoke checks when the schema changes.
 - Write/run endpoints must use server-side command IDs and allowlisted `execFile` argument templates. Never execute command strings sent from the browser.
 - Every new runnable command needs fixture or dry-run smoke coverage.
+- Skill Workshop install/export/plugin actions must stay draft-only until they use the same command ID boundary.
 
 ## Smoke Check
 
@@ -81,5 +84,7 @@ Keep beginner words visible first:
 - History = recent sessions/runs
 - Review = safe command preview
 - Run = reviewed command ID plus validated fields
+- Skill = reusable instructions OpenClaw/Codex can load
+- Plugin pack = grouped skills and metadata for sharing later
 
 Technical names can appear in command previews and source labels.

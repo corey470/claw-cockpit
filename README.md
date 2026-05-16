@@ -24,6 +24,7 @@ Make OpenClaw easier to operate without hiding the real system:
 - translate warnings into next steps
 - draft helper and reminder commands from current CLI shape
 - run reviewed helper/reminder setup through server-side allowlisted commands
+- inventory local skills and draft new `SKILL.md` files without installing them
 - show history, compatibility, and safety signals
 - keep the adapter open enough for contributors to extend
 
@@ -37,6 +38,7 @@ The sidebar is task-first:
 - `Fix warnings` for setup diagnosis
 - `Create helper` for OpenClaw agent setup
 - `Add reminder` for scheduled OpenClaw work
+- `Build skills` for skill inventory and draft creation
 - `Review runs` for session proof
 - `Safety & drift` for compatibility checks
 
@@ -60,7 +62,8 @@ For now, replies are local guide rails only. They do not call a helper or change
 4. Use `Plan a change` when you want a setup command drafted in plain English.
 5. Use `Fix warnings` when OpenClaw reports something confusing.
 6. Use `Create helper` or `Add reminder` to draft setup work before anything runs.
-7. Use `Safety & drift` after OpenClaw updates to see what the adapter is worried about.
+7. Use `Build skills` when you want to shape OpenClaw with a new reviewed skill draft.
+8. Use `Safety & drift` after OpenClaw updates to see what the adapter is worried about.
 
 ![Claw Cockpit warning screen](docs/assets/claw-cockpit-fix-warnings.png)
 
@@ -77,6 +80,19 @@ Reviewed commands are saved as local setup drafts in the planning flow.
 Helper and reminder drafts can be run from the review drawer after the command passes the server-side catalog. Warning/doctor commands stay preview-only until each one has its own allowlisted template.
 
 ![Claw Cockpit review and run drawer](docs/assets/claw-cockpit-review-run.png)
+
+## Skill Workshop
+
+The Skill Workshop is the first step toward making Claw Cockpit a friendly skill-building surface for OpenClaw users.
+
+It can:
+
+- scan local skill folders
+- show plain-English quality signals
+- draft a new `SKILL.md` from beginner-friendly fields
+- open the draft in the same review drawer used by command previews
+
+It does not install skills yet. Install/package actions should use the same reviewed command-catalog pattern before becoming runnable.
 
 ## Run Locally
 
@@ -97,6 +113,7 @@ With the dev server running, check the adapter contract:
 
 ```bash
 npm run smoke:overview
+npm run smoke:skills
 npm run smoke:ui
 ```
 
@@ -109,6 +126,7 @@ The default posture is review-first:
 - `/api/overview` reads OpenClaw status, gateway probe output, `openclaw.json`, and cron jobs.
 - setup cards show command previews first.
 - `/api/commands/run` accepts only server-side command IDs, validated fields, and explicit confirmation.
+- `/api/skills/draft` returns draft file content only; it does not write or install skills.
 - command smoke tests use dry-run mode so CI never changes a live OpenClaw install.
 
 ## Open Source Posture
@@ -121,6 +139,7 @@ Contributors should be able to add:
 
 - new setup checks
 - new command draft templates
+- new skill draft templates and skill quality checks
 - parser fixtures for OpenClaw updates
 - safer run/review flows
 - docs for non-expert operators
@@ -141,6 +160,7 @@ Architecture decisions live in `docs/adr/`:
 - overview contract versioning
 - raw signal redaction
 - command drafts before execution
+- skill workshop drafts before install
 
 ## Current Readiness
 
@@ -148,11 +168,12 @@ Claw Cockpit is now ready for real local work as a review-first OpenClaw cockpit
 
 - status, warnings, helpers, reminders, sessions, and drift are readable
 - helper and reminder setup can be reviewed and run through the safe catalog
+- local skills can be inventoried and new `SKILL.md` drafts can be reviewed
 - command runs are audit-logged under the local OpenClaw home
 - GitHub Actions validates the app with fixtures
 - live local smoke checks validate your machine path
 
-The remaining gap before calling it fully complete is broad command coverage: warning fixes, plugin installs, and more OpenClaw maintenance actions need their own allowlisted templates before they become runnable.
+The remaining gap before calling it fully complete is broad command coverage: warning fixes, skill installs, plugin packaging, and more OpenClaw maintenance actions need their own allowlisted templates before they become runnable.
 
 ## Irie Product Philosophy
 
@@ -165,4 +186,4 @@ For an agent-control product, that means:
 - make approval and verification part of the main flow
 - keep copy plain enough for a beginner who has never touched OpenClaw config
 - avoid generic AI dashboard filler
-- use task words first: Check OpenClaw, Plan a change, Fix warnings, Create helper, Add reminder, Review runs, Safety & drift
+- use task words first: Check OpenClaw, Plan a change, Fix warnings, Create helper, Add reminder, Build skills, Review runs, Safety & drift

@@ -13,6 +13,7 @@ This is what people see. Keep it task-first:
 - Fix warnings
 - Create helper
 - Add reminder
+- Build skills
 - Review runs
 - Safety & drift
 
@@ -28,8 +29,11 @@ Paths:
 - `server/compatibilityScoring.mjs`
 - `server/overviewNormalizer.mjs`
 - `server/commandCatalog.mjs`
+- `server/skillWorkshop.mjs`
 
 This is the translator between OpenClaw and the UI. It reads the OpenClaw CLI, gateway, config, and reminder files, then sends the browser a safer summary.
+
+It also reads local skill folders and creates review-only skill drafts. The draft path should stay file-preview-only until install/package commands are allowlisted.
 
 When OpenClaw changes, fix the adapter first.
 
@@ -48,6 +52,7 @@ Paths:
 - `scripts/smoke-overview.mjs`
 - `scripts/smoke-ui.mjs`
 - `scripts/smoke-commands.mjs`
+- `scripts/smoke-skills.mjs`
 - `scripts/ci-smoke.mjs`
 
 These checks make sure the cockpit still starts, still reads OpenClaw, and still renders without obvious layout breaks.
@@ -58,6 +63,7 @@ Run:
 npm run lint
 npm run build
 npm run smoke:overview
+npm run smoke:skills
 npm run smoke:ui
 ```
 
@@ -69,5 +75,6 @@ Good next steps are small and concrete:
 - add one new parser fixture
 - improve one mobile layout issue
 - explain one OpenClaw concept in plain English
+- add one skill quality check
 - move one adapter responsibility into a smaller file
 - add one allowlisted command with validation and dry-run coverage

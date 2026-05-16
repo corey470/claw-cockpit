@@ -26,7 +26,7 @@ import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 
 type HealthState = 'healthy' | 'attention' | 'blocked' | 'unknown'
-type SectionId = 'home' | 'chat' | 'doctor' | 'projects' | 'jobs' | 'runs' | 'settings'
+type SectionId = 'home' | 'chat' | 'doctor' | 'projects' | 'jobs' | 'skills' | 'runs' | 'settings'
 
 type ChatMessage = {
   id: string
@@ -43,6 +43,7 @@ type ReviewDraft = {
   title: string
   summary: string
   command: string
+  artifactLabel?: string
   nextStep: string
   commandId?: 'agent.add' | 'cron.add'
   params?: Record<string, string>
@@ -153,6 +154,50 @@ type Overview = {
   sessions: SessionSummary[]
 }
 
+type SkillQuality = {
+  state: HealthState
+  label: string
+  summary: string
+  warnings: string[]
+  signals: string[]
+}
+
+type SkillSummary = {
+  id: string
+  name: string
+  title: string
+  description: string
+  path: string
+  root: string
+  quality: SkillQuality
+  signals: string[]
+}
+
+type SkillWorkshop = {
+  generatedAt: string
+  roots: string[]
+  counts: {
+    skills: number
+    needsAttention: number
+    withExamples: number
+    withScripts: number
+  }
+  skills: SkillSummary[]
+  pluginReadiness: {
+    state: HealthState
+    summary: string
+    nextStep: string
+  }
+}
+
+type SkillDraftInput = {
+  skillName: string
+  displayName: string
+  goal: string
+  boundaries: string
+  example: string
+}
+
 const emptyOverview: Overview = {
   adapter: {
     name: 'claw-cockpit-local-adapter',
@@ -205,12 +250,30 @@ const emptyOverview: Overview = {
   sessions: [],
 }
 
+const emptySkillWorkshop: SkillWorkshop = {
+  generatedAt: '',
+  roots: [],
+  counts: {
+    skills: 0,
+    needsAttention: 0,
+    withExamples: 0,
+    withScripts: 0,
+  },
+  skills: [],
+  pluginReadiness: {
+    state: 'unknown',
+    summary: 'Skill inventory has not been checked yet.',
+    nextStep: 'Refresh the cockpit to scan local skill folders.',
+  },
+}
+
 const navItems = [
   { id: 'home', label: 'Check OpenClaw', task: 'Status, warnings, next move', icon: Home },
   { id: 'chat', label: 'Plan a change', task: 'Draft setup before it runs', icon: MessageSquareText },
   { id: 'doctor', label: 'Fix warnings', task: 'Translate setup issues', icon: Wrench },
   { id: 'projects', label: 'Create helper', task: 'OpenClaw agent setup', icon: FolderGit2 },
   { id: 'jobs', label: 'Add reminder', task: 'Scheduled OpenClaw work', icon: Clock3 },
+  { id: 'skills', label: 'Build skills', task: 'Skill workshop drafts', icon: Sparkles },
   { id: 'runs', label: 'Review runs', task: 'Sessions and proof', icon: Activity },
   { id: 'settings', label: 'Safety & drift', task: 'Compatibility checks', icon: Settings },
 ] satisfies { id: SectionId; label: string; task: string; icon: typeof Home }[]
@@ -240,6 +303,11 @@ const sectionCopy = {
     label: 'Add reminder',
     title: 'Turn reminders into safe scheduled work.',
     detail: 'Turn reminders into reviewed OpenClaw jobs before anything is created.',
+  },
+  skills: {
+    label: 'Build skills',
+    title: 'Shape OpenClaw with beginner-friendly skills.',
+    detail: 'See local skills, draft new SKILL.md files, and keep plugin packaging as a reviewed next step.',
   },
   runs: {
     label: 'Review runs',
@@ -364,6 +432,7 @@ function cronPreview(reminderName: string, agent: string, message: string, cron:
 function App() {
   const [activeSection, setActiveSection] = useState<SectionId>('chat')
   const [overview, setOverview] = useState<Overview>(emptyOverview)
+  const [skillWorkshop, setSkillWorkshop] = useState<SkillWorkshop>(emptySkillWorkshop)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([openingMessage])
@@ -384,10 +453,11 @@ function App() {
     setIsLoading(true)
     setError('')
     try {
-      const response = await fetch('/api/overview')
-      if (!response.ok) throw new Error(`Adapter returned HTTP ${response.status}`)
-      const data = (await response.json()) as Overview
-      setOverview(data)
+      const [overviewResponse, skillsResponse] = await Promise.all([fetch('/api/overview'), fetch('/api/skills')])
+      if (!overviewResponse.ok) throw new Error(`Adapter returned HTTP ${overviewResponse.status}`)
+      if (!skillsResponse.ok) throw new Error(`Skills scan returned HTTP ${skillsResponse.status}`)
+      setOverview((await overviewResponse.json()) as Overview)
+      setSkillWorkshop((await skillsResponse.json()) as SkillWorkshop)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not reach the local adapter.')
     } finally {
@@ -397,13 +467,20 @@ function App() {
 
   useEffect(() => {
     let cancelled = false
-    fetch('/api/overview')
-      .then((response) => {
-        if (!response.ok) throw new Error(`Adapter returned HTTP ${response.status}`)
-        return response.json() as Promise<Overview>
+    Promise.all([fetch('/api/overview'), fetch('/api/skills')])
+      .then(async ([overviewResponse, skillsResponse]) => {
+        if (!overviewResponse.ok) throw new Error(`Adapter returned HTTP ${overviewResponse.status}`)
+        if (!skillsResponse.ok) throw new Error(`Skills scan returned HTTP ${skillsResponse.status}`)
+        return {
+          overview: (await overviewResponse.json()) as Overview,
+          skills: (await skillsResponse.json()) as SkillWorkshop,
+        }
       })
       .then((data) => {
-        if (!cancelled) setOverview(data)
+        if (!cancelled) {
+          setOverview(data.overview)
+          setSkillWorkshop(data.skills)
+        }
       })
       .catch((err: unknown) => {
         if (!cancelled) {
@@ -538,6 +615,29 @@ function App() {
     }
   }
 
+  const draftSkill = async (input: SkillDraftInput) => {
+    setReviewNotice('')
+    setRunResult(null)
+    try {
+      const response = await fetch('/api/skills/draft', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(input),
+      })
+      const draft = await response.json()
+      if (!response.ok) throw new Error(draft.error || `Skills draft returned HTTP ${response.status}`)
+      openReview({
+        title: draft.displayName,
+        summary: `Drafts ${draft.pathPreview}. This is review-only; nothing is installed yet.`,
+        command: draft.preview,
+        artifactLabel: 'SKILL.md preview',
+        nextStep: 'Review the trigger description and boundaries before adding an install step.',
+      })
+    } catch (error) {
+      setReviewNotice(error instanceof Error ? error.message : 'Could not draft the skill.')
+    }
+  }
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -633,6 +733,8 @@ function App() {
             priorityChecks={priorityChecks}
             onNavigate={setActiveSection}
             savedDrafts={savedDrafts}
+            skillWorkshop={skillWorkshop}
+            onDraftSkill={draftSkill}
           />
         )}
 
@@ -823,6 +925,8 @@ function DashboardPage({
   priorityChecks,
   onNavigate,
   savedDrafts,
+  skillWorkshop,
+  onDraftSkill,
 }: {
   activeSection: SectionId
   overview: Overview
@@ -830,6 +934,8 @@ function DashboardPage({
   priorityChecks: DoctorCheck[]
   onNavigate: (section: SectionId) => void
   savedDrafts: SavedDraft[]
+  skillWorkshop: SkillWorkshop
+  onDraftSkill: (input: SkillDraftInput) => void
 }) {
   const [selectedProject, setSelectedProject] = useState(projectTemplates[0])
   const [selectedJob, setSelectedJob] = useState(jobTemplates[0])
@@ -840,6 +946,11 @@ function DashboardPage({
   const [reminderMessage, setReminderMessage] = useState(jobTemplates[0].message)
   const [reminderCron, setReminderCron] = useState(jobTemplates[0].cron)
   const [reminderTimezone, setReminderTimezone] = useState('America/New_York')
+  const [skillName, setSkillName] = useState('repo-status-coach')
+  const [skillDisplayName, setSkillDisplayName] = useState('Repo Status Coach')
+  const [skillGoal, setSkillGoal] = useState('check a local repo, explain what changed, and suggest the next safest step')
+  const [skillBoundaries, setSkillBoundaries] = useState('Ask before editing files, running commands, installing packages, or touching secrets.')
+  const [skillExample, setSkillExample] = useState('Help me understand what changed in this repo and what I should do next.')
   const riskChecks = priorityChecks.filter((check) => check.state === 'blocked' || check.state === 'attention')
   const compatibilityRisks = overview.compatibility.checks.filter(
     (check) => check.state === 'blocked' || check.state === 'attention',
@@ -1050,6 +1161,142 @@ function DashboardPage({
                       <span>{job.schedule}</span>
                     </div>
                     <small>{job.status}</small>
+                  </div>
+                ))
+              )}
+            </div>
+          </article>
+        </section>
+      </>
+    )
+  }
+
+  if (activeSection === 'skills') {
+    const visibleSkills = skillWorkshop.skills.slice(0, 10)
+    const attentionSkills = skillWorkshop.skills.filter((skill) => skill.quality.state !== 'healthy').slice(0, 4)
+
+    return (
+      <>
+        <section className="proof-strip skill-proof" aria-label="Skill workshop proof">
+          <div>
+            <span>Skills read</span>
+            <strong>{skillWorkshop.counts.skills}</strong>
+          </div>
+          <div>
+            <span>Need attention</span>
+            <strong>{skillWorkshop.counts.needsAttention}</strong>
+          </div>
+          <div>
+            <span>With examples</span>
+            <strong>{skillWorkshop.counts.withExamples}</strong>
+          </div>
+          <div>
+            <span>With scripts</span>
+            <strong>{skillWorkshop.counts.withScripts}</strong>
+          </div>
+          <div>
+            <span>Plugin path</span>
+            <strong>{stateLabel(skillWorkshop.pluginReadiness.state)}</strong>
+          </div>
+        </section>
+
+        <section className="task-grid two-column">
+          <article className="panel wide-panel">
+            <PanelHeader icon={<Sparkles size={19} />} title="Draft a skill" action="Review only" />
+            <p className="panel-copy">
+              Turn a plain-English idea into a first `SKILL.md` draft. This does not install anything yet.
+            </p>
+            <div className="setup-form skill-builder" aria-label="Skill draft fields">
+              <label>
+                <span>Skill folder name</span>
+                <input value={skillName} onChange={(event) => setSkillName(event.target.value)} />
+              </label>
+              <label>
+                <span>Display name</span>
+                <input value={skillDisplayName} onChange={(event) => setSkillDisplayName(event.target.value)} />
+              </label>
+              <label className="full-field">
+                <span>What should this skill help with?</span>
+                <input value={skillGoal} onChange={(event) => setSkillGoal(event.target.value)} />
+              </label>
+              <label className="full-field">
+                <span>What should it be careful about?</span>
+                <input value={skillBoundaries} onChange={(event) => setSkillBoundaries(event.target.value)} />
+              </label>
+              <label className="full-field">
+                <span>Example beginner prompt</span>
+                <input value={skillExample} onChange={(event) => setSkillExample(event.target.value)} />
+              </label>
+            </div>
+            <button
+              className="section-jump skill-draft-action"
+              type="button"
+              onClick={() =>
+                onDraftSkill({
+                  skillName,
+                  displayName: skillDisplayName,
+                  goal: skillGoal,
+                  boundaries: skillBoundaries,
+                  example: skillExample,
+                })
+              }
+            >
+              <ClipboardList size={16} />
+              Review SKILL.md draft
+            </button>
+          </article>
+
+          <article className="panel">
+            <PanelHeader icon={<PlugZap size={19} />} title="Plugin pack path" action="Later step" />
+            <p className="panel-copy">{skillWorkshop.pluginReadiness.summary}</p>
+            <div className="plain-steps">
+              <div>
+                <strong>1. Draft useful skills</strong>
+                <p>Keep each skill small, named clearly, and bounded by what it should never do.</p>
+              </div>
+              <div>
+                <strong>2. Test with real prompts</strong>
+                <p>Make sure a beginner can understand what the skill will change before it acts.</p>
+              </div>
+              <div>
+                <strong>3. Package related skills</strong>
+                <p>{skillWorkshop.pluginReadiness.nextStep}</p>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section className="task-grid two-column">
+          <article className="panel wide-panel">
+            <PanelHeader icon={<ListChecks size={19} />} title="Local skills" action={`${visibleSkills.length} shown`} />
+            <div className="skill-list">
+              {visibleSkills.map((skill) => (
+                <div className="skill-card" key={`${skill.root}-${skill.id}`}>
+                  <div>
+                    <strong>{skill.title}</strong>
+                    <p>{skill.description}</p>
+                    <small>{skill.path}</small>
+                  </div>
+                  <span className={`quality-pill ${skill.quality.state}`}>{skill.quality.label}</span>
+                </div>
+              ))}
+              {visibleSkills.length === 0 && <div className="empty-state">No local skills were found in the scanned roots.</div>}
+            </div>
+          </article>
+
+          <article className="panel">
+            <PanelHeader icon={<Wrench size={19} />} title="Skill doctor" action={`${attentionSkills.length} to review`} />
+            <div className="quality-list">
+              {attentionSkills.length === 0 ? (
+                <div className="empty-state">No skill quality issues found in the first scan.</div>
+              ) : (
+                attentionSkills.map((skill) => (
+                  <div className="check-row" key={skill.id}>
+                    <span className={`check-dot ${skill.quality.state}`} />
+                    <div>
+                      <strong>{skill.title}</strong>
+                      <p>{skill.quality.summary}</p>
+                    </div>
                   </div>
                 ))
               )}
@@ -1494,7 +1741,7 @@ function ReviewDrawer({
         </div>
 
         <div className="review-section">
-          <strong>Command preview</strong>
+          <strong>{draft.artifactLabel ?? 'Command preview'}</strong>
           <code>{draft.command}</code>
         </div>
 
@@ -1505,7 +1752,11 @@ function ReviewDrawer({
           </div>
           <div>
             <CheckCircle2 size={16} />
-            <span>The browser sends a command ID and validated fields, not raw shell text.</span>
+            <span>
+              {canRun
+                ? 'The browser sends a command ID and validated fields, not raw shell text.'
+                : 'This is a draft preview only; install and run steps come later.'}
+            </span>
           </div>
           <div>
             <CheckCircle2 size={16} />

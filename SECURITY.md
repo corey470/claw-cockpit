@@ -9,6 +9,7 @@ Claw Cockpit is a local control surface for OpenClaw. It should stay careful by 
 - No browser request can execute an arbitrary shell command.
 - Raw OpenClaw output is hidden unless local debug mode is explicitly enabled.
 - Run features use server-side command IDs, allowlisted arguments, strict validation, explicit confirmation, and audit logging.
+- Skill Workshop draft features return file previews only. They must not write, install, or package skills until that action has an allowlisted server-side path.
 
 ## Reporting A Problem
 
@@ -16,4 +17,4 @@ If you find a way for Claw Cockpit to expose secrets, leak raw machine paths une
 
 ## Contributor Rule
 
-When in doubt, keep the UI read-only and add a review step before any action can change OpenClaw. Never add a browser-supplied shell command field.
+When in doubt, keep the UI read-only and add a review step before any action can change OpenClaw or local skill folders. Never add a browser-supplied shell command field.

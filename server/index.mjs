@@ -2,6 +2,7 @@ import { createServer } from 'node:http'
 import { commandCatalog, buildCommandDraft, readAuditLog, runCatalogCommand } from './commandCatalog.mjs'
 import { buildOverview } from './overviewNormalizer.mjs'
 import { defaultOpenClawPaths, readOpenClawSources } from './openclawSources.mjs'
+import { buildSkillDraft, buildSkillWorkshop } from './skillWorkshop.mjs'
 
 const port = Number.parseInt(process.env.COCKPIT_API_PORT ?? '4314', 10)
 const paths = defaultOpenClawPaths(process.env)
@@ -21,6 +22,22 @@ createServer(async (request, response) => {
 
   if (url.pathname === '/api/commands') {
     sendJson(response, 200, { commands: commandCatalog })
+    return
+  }
+
+  if (url.pathname === '/api/skills') {
+    sendJson(response, 200, await buildSkillWorkshop({ env: process.env, fixtureDir: process.env.COCKPIT_FIXTURE_DIR }))
+    return
+  }
+
+  if (url.pathname === '/api/skills/draft' && request.method === 'POST') {
+    try {
+      assertLocalRequest(request)
+      const body = await readJsonBody(request)
+      sendJson(response, 200, buildSkillDraft(body))
+    } catch (error) {
+      sendJson(response, 400, { error: error instanceof Error ? error.message : String(error) })
+    }
     return
   }
 

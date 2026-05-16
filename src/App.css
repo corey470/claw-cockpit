@@ -1163,11 +1163,14 @@ code {
   font-family: var(--mono);
   font-size: 12px;
   line-height: 1.45;
+  white-space: pre-wrap;
 }
 
 .template-list,
 .job-selector,
-.table-list {
+.table-list,
+.skill-list,
+.quality-list {
   min-width: 0;
   display: grid;
   gap: 8px;
@@ -1206,6 +1209,75 @@ code {
   background: #ffffff;
   font: inherit;
   font-size: 13px;
+}
+
+.skill-builder {
+  margin-bottom: 12px;
+}
+
+.skill-draft-action {
+  width: 100%;
+  justify-content: center;
+}
+
+.skill-card {
+  min-width: 0;
+  border: 1px solid #eef2f7;
+  border-radius: 8px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  background: #fbfdff;
+}
+
+.skill-card strong {
+  display: block;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.skill-card p {
+  margin: 4px 0 0;
+  color: #334155;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.skill-card small {
+  display: block;
+  margin-top: 7px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.quality-pill {
+  border-radius: 999px;
+  padding: 5px 8px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.quality-pill.healthy {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.quality-pill.attention {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.quality-pill.blocked {
+  background: #fee2e2;
+  color: #991b1b;
 }
 
 .template,

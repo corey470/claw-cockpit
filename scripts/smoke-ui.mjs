@@ -27,6 +27,7 @@ try {
     [/Fix warnings/i, /Check what needs attention first/i],
     [/Create helper/i, /Set up a helper without touching config/i],
     [/Add reminder/i, /Turn reminders into safe scheduled work/i],
+    [/Build skills/i, /Shape OpenClaw with beginner-friendly skills/i],
     [/Review runs/i, /See what happened and what changed/i],
     [/Safety & drift/i, /Keep control without guessing/i],
   ]
@@ -35,6 +36,13 @@ try {
     await page.getByRole('button', { name: buttonName }).click()
     await page.getByRole('heading', { name: headingName }).waitFor()
   }
+
+  await page.getByRole('button', { name: /Build skills/i }).click()
+  await page.getByRole('button', { name: /Review SKILL.md draft/i }).click()
+  await page.getByLabel('Review setup draft').waitFor()
+  await page.getByText('SKILL.md preview').waitFor()
+  await page.getByText('This is a draft preview only').waitFor()
+  await page.getByRole('button', { name: /Close review/i }).click()
 
   const desktopOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
