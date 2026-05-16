@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security concern
+    url: https://github.com/corey470/claw-cockpit/security/advisories/new
+    about: Please report possible secret leaks or unsafe command execution privately.

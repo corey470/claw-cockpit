@@ -1,0 +1,36 @@
+name: Feature request
+description: Suggest a new Claw Cockpit feature.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Start with the OpenClaw task, not the UI widget.
+      placeholder: Example: I want to set up a repo helper without remembering the OpenClaw command flags.
+    validations:
+      required: true
+  - type: textarea
+    id: beginner-path
+    attributes:
+      label: Beginner-friendly path
+      description: What should someone be able to do in plain English?
+      placeholder: Example: Type the repo folder and helper purpose, then review the generated command.
+    validations:
+      required: true
+  - type: dropdown
+    id: safety
+    attributes:
+      label: Does this change OpenClaw state?
+      options:
+        - No, read-only
+        - Maybe, draft/review only
+        - Yes, would need safe execution design
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Extra context
+      description: Links, screenshots, or examples. Do not paste secrets.

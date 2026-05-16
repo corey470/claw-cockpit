@@ -1,0 +1,43 @@
+name: OpenClaw drift report
+description: Report where OpenClaw changed and Claw Cockpit needs to catch up.
+title: "[OpenClaw drift]: "
+labels: ["openclaw drift"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when OpenClaw updates and the cockpit parser, command draft, or compatibility check no longer matches reality.
+  - type: input
+    id: openclaw-version
+    attributes:
+      label: OpenClaw version or channel
+      placeholder: Example: 2026.5.16-beta.2
+  - type: dropdown
+    id: drift-area
+    attributes:
+      label: What changed?
+      options:
+        - CLI help
+        - status --deep output
+        - gateway probe
+        - helper/agent command
+        - cron/reminder command
+        - config shape
+        - security audit
+        - plugin behavior
+        - unknown
+    validations:
+      required: true
+  - type: textarea
+    id: symptom
+    attributes:
+      label: What did Claw Cockpit show?
+      description: Do not paste secrets, tokens, private keys, or full raw machine output.
+      placeholder: Example: It says helpers are unavailable, but openclaw agents --help now uses a new command name.
+    validations:
+      required: true
+  - type: textarea
+    id: safe-evidence
+    attributes:
+      label: Safe evidence
+      description: Paste only redacted snippets or screenshots that do not include secrets.

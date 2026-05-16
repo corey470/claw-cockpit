@@ -1,0 +1,40 @@
+name: Good first improvement
+description: Suggest a small beginner-friendly improvement.
+title: "[Good first issue]: "
+labels: ["good first issue"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping make OpenClaw easier to operate. Small, clear changes are welcome.
+  - type: textarea
+    id: task
+    attributes:
+      label: What should improve?
+      description: Describe the task in plain English.
+      placeholder: Example: Explain what an OpenClaw helper is on the Create helper page.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Check OpenClaw
+        - Plan a change
+        - Fix warnings
+        - Create helper
+        - Add reminder
+        - Review runs
+        - Safety & drift
+        - Docs
+        - Tests
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: What would done look like?
+      placeholder: Example: A beginner can understand the warning without reading raw config.
+    validations:
+      required: true
