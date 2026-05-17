@@ -33,7 +33,7 @@ Paths:
 
 This is the translator between OpenClaw and the UI. It reads the OpenClaw CLI, gateway, config, and reminder files, then sends the browser a safer summary.
 
-It also reads local skill folders and creates review-only skill drafts. The draft path should stay file-preview-only until install/package commands are allowlisted.
+It also reads local skill folders, creates skill drafts, and saves reviewed drafts under the Cockpit draft folder. Install/package commands stay separate until they are allowlisted.
 
 When OpenClaw changes, fix the adapter first.
 

@@ -25,6 +25,32 @@ if (!draftResponse.ok) throw new Error(draft.error || `skill draft returned HTTP
 if (!draft.preview?.includes('name: repo-status-coach')) throw new Error('skill draft missing frontmatter name')
 if (!draft.preview?.includes('Safe Boundaries')) throw new Error('skill draft missing safety boundaries')
 
+const saveResponse = await fetch(`${baseUrl}/api/skills/drafts/save`, {
+  method: 'POST',
+  headers: {
+    'content-type': 'application/json',
+    origin: baseUrl,
+  },
+  body: JSON.stringify({
+    confirm: 'SAVE',
+    params: {
+      skillName: 'repo-status-coach',
+      displayName: 'Repo Status Coach',
+      goal: 'check a local repo and explain the safest next step',
+      boundaries: 'Ask before editing files, running commands, installing packages, or touching secrets.',
+      example: 'Help me understand what changed in this repo.',
+    },
+  }),
+})
+const saved = await saveResponse.json()
+if (!saveResponse.ok) throw new Error(saved.error || `skill save returned HTTP ${saveResponse.status}`)
+if (!saved.path?.endsWith('/repo-status-coach/SKILL.md')) throw new Error('skill save returned an unexpected path')
+
+const refreshedResponse = await fetch(`${baseUrl}/api/skills`)
+const refreshed = await refreshedResponse.json()
+if (!refreshedResponse.ok) throw new Error(refreshed.error || `refreshed skills returned HTTP ${refreshedResponse.status}`)
+if ((refreshed.counts?.savedDrafts ?? 0) < 1) throw new Error('saved draft count did not update')
+
 console.log(
   JSON.stringify(
     {
@@ -32,6 +58,8 @@ console.log(
       skills: inventory.counts.skills,
       needsAttention: inventory.counts.needsAttention,
       draft: draft.pathPreview,
+      saved: saved.path,
+      savedDrafts: refreshed.counts.savedDrafts,
     },
     null,
     2,

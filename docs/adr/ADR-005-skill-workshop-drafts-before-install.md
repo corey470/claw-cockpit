@@ -15,7 +15,7 @@ Claw Cockpit will start Skill Workshop as a read-and-draft surface:
 - inventory local skill folders
 - show beginner-readable quality signals
 - generate `SKILL.md` previews from plain-English fields
-- save drafts through the existing review drawer
+- save reviewed drafts under `~/.openclaw/claw-cockpit/skill-drafts/`
 
 Skill install, export, and plugin packaging are not runnable until each action has a server-side allowlisted command or file-write path with validation and smoke coverage.
 

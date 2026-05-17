@@ -1,10 +1,13 @@
-import { readdir, readFile, stat } from 'node:fs/promises'
+import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 
-export async function buildSkillWorkshop({ env, fixtureDir }) {
+export async function buildSkillWorkshop({ env, fixtureDir, paths }) {
   const roots = fixtureDir ? [join(fixtureDir, 'skills')] : skillRoots(env)
-  const skills = (await Promise.all(roots.map((root) => readSkillRoot(root)))).flat()
+  const [skills, drafts] = await Promise.all([
+    Promise.all(roots.map((root) => readSkillRoot(root))).then((items) => items.flat()),
+    readSavedSkillDrafts(paths),
+  ])
   const sorted = skills.sort((a, b) => a.name.localeCompare(b.name)).slice(0, 300)
   const needsAttention = sorted.filter((skill) => skill.quality.state !== 'healthy').length
   const withExamples = sorted.filter((skill) => skill.quality.signals.includes('examples')).length
@@ -18,8 +21,11 @@ export async function buildSkillWorkshop({ env, fixtureDir }) {
       needsAttention,
       withExamples,
       withScripts,
+      savedDrafts: drafts.length,
     },
     skills: sorted,
+    drafts,
+    draftRoot: paths ? skillDraftRoot(paths) : '',
     pluginReadiness: {
       state: sorted.length > 0 ? 'attention' : 'unknown',
       summary:
@@ -55,8 +61,74 @@ export function buildSkillDraft(params = {}) {
     checks: [
       'Uses lowercase hyphen-case naming.',
       'Includes required name and description frontmatter.',
-      'Keeps install as a later reviewed step.',
+      'Saves to the Cockpit draft folder before any install step.',
     ],
+  }
+}
+
+export async function saveSkillDraft({ params, confirm, paths }) {
+  if (confirm !== 'SAVE') throw new Error('Type SAVE to confirm this reviewed skill draft.')
+  const draft = buildSkillDraft(params)
+  const root = skillDraftRoot(paths)
+  const draftDir = join(root, draft.skillName)
+  const skillPath = join(draftDir, 'SKILL.md')
+  const metadataPath = join(draftDir, 'draft.json')
+  const savedAt = new Date().toISOString()
+
+  await mkdir(draftDir, { recursive: true })
+  await writeFile(skillPath, draft.preview)
+  await writeFile(
+    metadataPath,
+    `${JSON.stringify(
+      {
+        skillName: draft.skillName,
+        displayName: draft.displayName,
+        savedAt,
+        path: skillPath,
+        installState: 'draft-only',
+      },
+      null,
+      2,
+    )}\n`,
+  )
+
+  return {
+    ok: true,
+    savedAt,
+    skillName: draft.skillName,
+    displayName: draft.displayName,
+    path: skillPath,
+    metadataPath,
+    message: `Saved reviewed skill draft to ${skillPath}`,
+  }
+}
+
+async function readSavedSkillDrafts(paths) {
+  if (!paths) return []
+  const root = skillDraftRoot(paths)
+  try {
+    const entries = await readdir(root, { withFileTypes: true })
+    const drafts = await Promise.all(
+      entries.filter((entry) => entry.isDirectory()).map((entry) => readSavedSkillDraft(join(root, entry.name))),
+    )
+    return drafts.filter(Boolean).sort((a, b) => b.savedAt.localeCompare(a.savedAt)).slice(0, 50)
+  } catch {
+    return []
+  }
+}
+
+async function readSavedSkillDraft(draftDir) {
+  try {
+    const metadata = JSON.parse(await readFile(join(draftDir, 'draft.json'), 'utf8'))
+    return {
+      skillName: metadata.skillName || basename(draftDir),
+      displayName: metadata.displayName || titleFromSlug(metadata.skillName || basename(draftDir)),
+      savedAt: metadata.savedAt || '',
+      path: metadata.path || join(draftDir, 'SKILL.md'),
+      installState: metadata.installState || 'draft-only',
+    }
+  } catch {
+    return null
   }
 }
 
@@ -65,6 +137,10 @@ function skillRoots(env) {
     return env.COCKPIT_SKILL_DIRS.split(':').map((root) => root.trim()).filter(Boolean)
   }
   return [join(homedir(), '.codex', 'skills'), join(homedir(), '.openclaw', 'skills')]
+}
+
+function skillDraftRoot(paths) {
+  return join(paths.openclawHome, 'claw-cockpit', 'skill-drafts')
 }
 
 async function readSkillRoot(root) {

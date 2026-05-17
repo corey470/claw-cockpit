@@ -50,7 +50,7 @@ When any of these change, the UI should show a drift warning instead of pretendi
 - Version the adapter contract and fail smoke checks when the schema changes.
 - Write/run endpoints must use server-side command IDs and allowlisted `execFile` argument templates. Never execute command strings sent from the browser.
 - Every new runnable command needs fixture or dry-run smoke coverage.
-- Skill Workshop install/export/plugin actions must stay draft-only until they use the same command ID boundary.
+- Skill Workshop install/export/plugin actions must stay saved-draft-only until they use the same command ID boundary.
 
 ## Smoke Check
 

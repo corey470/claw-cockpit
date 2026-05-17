@@ -44,9 +44,11 @@ type ReviewDraft = {
   summary: string
   command: string
   artifactLabel?: string
+  kind?: 'command' | 'skill'
   nextStep: string
   commandId?: 'agent.add' | 'cron.add'
   params?: Record<string, string>
+  skillParams?: SkillDraftInput
   status?: 'draft' | 'ready' | 'running' | 'succeeded' | 'failed'
   resultMessage?: string
 }
@@ -64,6 +66,17 @@ type CommandRunResult = {
   error?: string
   preview?: string
   finishedAt?: string
+}
+
+type SkillSaveResult = {
+  ok: boolean
+  savedAt?: string
+  skillName?: string
+  displayName?: string
+  path?: string
+  metadataPath?: string
+  message?: string
+  error?: string
 }
 
 type AgentSummary = {
@@ -181,8 +194,17 @@ type SkillWorkshop = {
     needsAttention: number
     withExamples: number
     withScripts: number
+    savedDrafts: number
   }
   skills: SkillSummary[]
+  drafts: {
+    skillName: string
+    displayName: string
+    savedAt: string
+    path: string
+    installState: string
+  }[]
+  draftRoot: string
   pluginReadiness: {
     state: HealthState
     summary: string
@@ -258,8 +280,11 @@ const emptySkillWorkshop: SkillWorkshop = {
     needsAttention: 0,
     withExamples: 0,
     withScripts: 0,
+    savedDrafts: 0,
   },
   skills: [],
+  drafts: [],
+  draftRoot: '',
   pluginReadiness: {
     state: 'unknown',
     summary: 'Skill inventory has not been checked yet.',
@@ -563,8 +588,38 @@ function App() {
     setReviewDraft(draft)
   }
 
-  const markReviewReady = () => {
-    if (reviewDraft) {
+  const markReviewReady = async () => {
+    if (!reviewDraft) return
+    setIsRunningDraft(true)
+    setRunResult(null)
+    try {
+      if (reviewDraft.kind === 'skill') {
+        const response = await fetch('/api/skills/drafts/save', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            confirm: 'SAVE',
+            params: reviewDraft.skillParams ?? {},
+          }),
+        })
+        const result = (await response.json()) as SkillSaveResult
+        if (!response.ok || !result.ok) throw new Error(result.error || `Skill save returned HTTP ${response.status}`)
+        setSavedDrafts((current) => [
+          {
+            ...reviewDraft,
+            id: `${reviewDraft.title}-${Date.now()}`,
+            savedAt: result.savedAt ? new Date(result.savedAt).toLocaleTimeString() : 'just now',
+            status: 'ready',
+            resultMessage: result.path,
+          },
+          ...current,
+        ])
+        setReviewNotice(`Saved skill draft: ${result.path}`)
+        setReviewDraft(null)
+        await refresh()
+        return
+      }
+
       setSavedDrafts((current) => [
         {
           ...reviewDraft,
@@ -573,9 +628,13 @@ function App() {
         },
         ...current,
       ])
+      setReviewNotice('Saved as a reviewed draft. Next safest move: choose the real folder, then keep it in review until running is enabled.')
+      setReviewDraft(null)
+    } catch (error) {
+      setReviewNotice(error instanceof Error ? error.message : 'Could not save the reviewed draft.')
+    } finally {
+      setIsRunningDraft(false)
     }
-    setReviewNotice('Saved as a reviewed draft. Next safest move: choose the real folder, then keep it in review until running is enabled.')
-    setReviewDraft(null)
   }
 
   const runReviewedDraft = async () => {
@@ -628,10 +687,12 @@ function App() {
       if (!response.ok) throw new Error(draft.error || `Skills draft returned HTTP ${response.status}`)
       openReview({
         title: draft.displayName,
-        summary: `Drafts ${draft.pathPreview}. This is review-only; nothing is installed yet.`,
+        summary: `Saves a reviewed copy under Cockpit skill drafts. This does not install the skill yet.`,
         command: draft.preview,
         artifactLabel: 'SKILL.md preview',
-        nextStep: 'Review the trigger description and boundaries before adding an install step.',
+        kind: 'skill',
+        skillParams: input,
+        nextStep: 'Save the reviewed draft first. Install can come later through a separate reviewed step.',
       })
     } catch (error) {
       setReviewNotice(error instanceof Error ? error.message : 'Could not draft the skill.')
@@ -1195,8 +1256,8 @@ function DashboardPage({
             <strong>{skillWorkshop.counts.withScripts}</strong>
           </div>
           <div>
-            <span>Plugin path</span>
-            <strong>{stateLabel(skillWorkshop.pluginReadiness.state)}</strong>
+            <span>Saved drafts</span>
+            <strong>{skillWorkshop.counts.savedDrafts}</strong>
           </div>
         </section>
 
@@ -1247,22 +1308,37 @@ function DashboardPage({
           </article>
 
           <article className="panel">
-            <PanelHeader icon={<PlugZap size={19} />} title="Plugin pack path" action="Later step" />
+            <PanelHeader icon={<PlugZap size={19} />} title="Saved skill drafts" action={`${skillWorkshop.counts.savedDrafts} saved`} />
             <p className="panel-copy">{skillWorkshop.pluginReadiness.summary}</p>
-            <div className="plain-steps">
-              <div>
-                <strong>1. Draft useful skills</strong>
-                <p>Keep each skill small, named clearly, and bounded by what it should never do.</p>
+            {skillWorkshop.drafts.length === 0 ? (
+              <div className="plain-steps">
+                <div>
+                  <strong>1. Draft useful skills</strong>
+                  <p>Keep each skill small, named clearly, and bounded by what it should never do.</p>
+                </div>
+                <div>
+                  <strong>2. Save reviewed drafts</strong>
+                  <p>Drafts save under the Cockpit folder before any install step exists.</p>
+                </div>
+                <div>
+                  <strong>3. Package related skills</strong>
+                  <p>{skillWorkshop.pluginReadiness.nextStep}</p>
+                </div>
               </div>
-              <div>
-                <strong>2. Test with real prompts</strong>
-                <p>Make sure a beginner can understand what the skill will change before it acts.</p>
+            ) : (
+              <div className="skill-list">
+                {skillWorkshop.drafts.slice(0, 5).map((draft) => (
+                  <div className="skill-card" key={`${draft.path}-${draft.savedAt}`}>
+                    <div>
+                      <strong>{draft.displayName}</strong>
+                      <p>{draft.installState === 'draft-only' ? 'Saved as a draft. Not installed yet.' : draft.installState}</p>
+                      <small>{draft.path}</small>
+                    </div>
+                    <span className="quality-pill attention">Draft</span>
+                  </div>
+                ))}
               </div>
-              <div>
-                <strong>3. Package related skills</strong>
-                <p>{skillWorkshop.pluginReadiness.nextStep}</p>
-              </div>
-            </div>
+            )}
           </article>
         </section>
 
@@ -1775,8 +1851,8 @@ function ReviewDrawer({
           <button type="button" className="secondary-action" onClick={onClose}>
             Keep editing
           </button>
-          <button type="button" className="primary-action" onClick={onMarkReady}>
-            Save reviewed draft
+          <button type="button" className="primary-action" onClick={onMarkReady} disabled={isRunning}>
+            {isRunning ? 'Saving...' : draft.kind === 'skill' ? 'Save skill draft' : 'Save reviewed draft'}
           </button>
           <button type="button" className="run-action" onClick={onRun} disabled={!canRun || isRunning}>
             <Play size={15} />

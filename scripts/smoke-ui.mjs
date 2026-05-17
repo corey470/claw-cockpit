@@ -42,7 +42,8 @@ try {
   await page.getByLabel('Review setup draft').waitFor()
   await page.getByText('SKILL.md preview').waitFor()
   await page.getByText('This is a draft preview only').waitFor()
-  await page.getByRole('button', { name: /Close review/i }).click()
+  await page.getByRole('button', { name: /Save skill draft/i }).click()
+  await page.getByText(/Saved skill draft:/i).waitFor()
 
   const desktopOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,

@@ -91,8 +91,9 @@ It can:
 - show plain-English quality signals
 - draft a new `SKILL.md` from beginner-friendly fields
 - open the draft in the same review drawer used by command previews
+- save reviewed drafts under `~/.openclaw/claw-cockpit/skill-drafts/`
 
-It does not install skills yet. Install/package actions should use the same reviewed command-catalog pattern before becoming runnable.
+It does not install skills yet. Saved drafts are working files for review. Install/package actions should use the same reviewed command-catalog pattern before becoming runnable.
 
 ## Run Locally
 
@@ -127,6 +128,7 @@ The default posture is review-first:
 - setup cards show command previews first.
 - `/api/commands/run` accepts only server-side command IDs, validated fields, and explicit confirmation.
 - `/api/skills/draft` returns draft file content only; it does not write or install skills.
+- `/api/skills/drafts/save` regenerates the reviewed draft server-side and writes only under the Cockpit draft folder.
 - command smoke tests use dry-run mode so CI never changes a live OpenClaw install.
 
 ## Open Source Posture
@@ -168,7 +170,7 @@ Claw Cockpit is now ready for real local work as a review-first OpenClaw cockpit
 
 - status, warnings, helpers, reminders, sessions, and drift are readable
 - helper and reminder setup can be reviewed and run through the safe catalog
-- local skills can be inventoried and new `SKILL.md` drafts can be reviewed
+- local skills can be inventoried, reviewed, and saved as `SKILL.md` drafts
 - command runs are audit-logged under the local OpenClaw home
 - GitHub Actions validates the app with fixtures
 - live local smoke checks validate your machine path

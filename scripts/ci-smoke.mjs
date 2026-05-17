@@ -6,9 +6,11 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const apiPort = '4514'
 const webPort = '4520'
 const fixtureDir = join(root, 'fixtures', 'openclaw-current')
+const smokeOpenClawHome = join(root, '.tmp', 'openclaw-smoke')
 const viteBin = join(root, 'node_modules', '.bin', 'vite')
 const env = {
   ...process.env,
+  OPENCLAW_HOME: smokeOpenClawHome,
   COCKPIT_API_PORT: apiPort,
   COCKPIT_FIXTURE_DIR: fixtureDir,
   COCKPIT_API_TARGET: `http://127.0.0.1:${apiPort}`,

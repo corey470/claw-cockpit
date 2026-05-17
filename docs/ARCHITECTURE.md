@@ -20,7 +20,7 @@ Browser UI
 - `server/compatibilityScoring.mjs` scores drift, security, and command-surface risk.
 - `server/overviewNormalizer.mjs` returns the browser-safe overview contract.
 - `server/commandCatalog.mjs` owns runnable command IDs, validation, dry-run mode, execution, and audit logs.
-- `server/skillWorkshop.mjs` reads local skills and drafts review-only `SKILL.md` files.
+- `server/skillWorkshop.mjs` reads local skills, drafts `SKILL.md` previews, and saves reviewed drafts under the Cockpit draft folder.
 - `scripts/smoke-overview.mjs` checks the adapter contract.
 - `scripts/smoke-ui.mjs` checks desktop/mobile rendering and the review drawer.
 - `scripts/smoke-commands.mjs` checks catalog preview/run behavior without changing live state.
@@ -32,7 +32,7 @@ Browser UI
 - The browser should receive normalized cockpit data, not raw OpenClaw output.
 - Command previews become execution requests only when they carry a supported server-side command ID.
 - Execution uses `execFile`, validated arguments, local origin checks, explicit confirmation, and audit logging.
-- Skill drafts are file previews only until install/package commands are explicitly allowlisted.
+- Skill drafts can be saved only under `~/.openclaw/claw-cockpit/skill-drafts/`; install/package commands are separate future allowlisted actions.
 - OpenClaw CLI output should be treated as a changing source, not a permanent API.
 
 ## Adapter Split
@@ -44,7 +44,7 @@ The adapter is split into:
 - `overviewNormalizer`: beginner-facing output
 - `compatibilityScoring`: drift and safety checks
 - `commandCatalog`: capability-backed command drafts and safe execution
-- `skillWorkshop`: local skill inventory and review-only draft generation
+- `skillWorkshop`: local skill inventory, draft generation, and safe draft persistence
 
 That split keeps OpenClaw churn away from the UI.
 
@@ -52,4 +52,4 @@ That split keeps OpenClaw churn away from the UI.
 
 Set `COCKPIT_FIXTURE_DIR=fixtures/openclaw-current` to run the adapter without a live OpenClaw install. This is what GitHub Actions uses.
 
-Fixture mode also reads `fixtures/openclaw-current/skills` so skill inventory and Skill Workshop smoke tests work without a local `~/.codex/skills` folder.
+Fixture mode also reads `fixtures/openclaw-current/skills` so skill inventory and Skill Workshop smoke tests work without a local `~/.codex/skills` folder. CI points `OPENCLAW_HOME` at `.tmp/openclaw-smoke` so draft-save smoke tests never touch a real OpenClaw home.

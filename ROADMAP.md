@@ -5,7 +5,7 @@
 - Keep `/api/overview` stable and redacted.
 - Keep command drafts current with live OpenClaw CLI help.
 - Keep the command catalog narrow, validated, and smoke-tested.
-- Keep Skill Workshop draft-only until install/package commands are allowlisted.
+- Keep Skill Workshop saved-draft-only until install/package commands are allowlisted.
 - Keep the sidebar task-first instead of app-tab-first.
 - Keep smoke checks running against both live OpenClaw and redacted fixtures.
 
@@ -15,7 +15,7 @@
 - Add fixture tests for OpenClaw output drift.
 - Add a command catalog returned by the adapter instead of hard-coding command drafts in the UI.
 - Expand runnable catalog coverage for selected warning fixes.
-- Add reviewed skill install/export actions after the draft flow is trusted.
+- Add reviewed skill install/export actions after saved drafts are easy to inspect.
 
 ## Later
 
@@ -30,7 +30,7 @@
 - GitHub Actions validation with fixture-backed smoke testing.
 - Adapter split into sources, parsers, compatibility scoring, and overview normalization.
 - Safe command catalog for reviewed helper and reminder execution.
-- Skill Workshop inventory and review-only `SKILL.md` drafting.
+- Skill Workshop inventory, `SKILL.md` drafting, and safe saved drafts.
 - Local reviewed-draft persistence.
 - Focused task pages for warnings, helpers, reminders, runs, and safety drift.
 - README screenshots and first-run walkthrough.
