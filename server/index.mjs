@@ -2,7 +2,14 @@ import { createServer } from 'node:http'
 import { commandCatalog, buildCommandDraft, readAuditLog, runCatalogCommand } from './commandCatalog.mjs'
 import { buildOverview } from './overviewNormalizer.mjs'
 import { defaultOpenClawPaths, readOpenClawSources } from './openclawSources.mjs'
-import { buildPluginPackDraft, buildSkillDraft, buildSkillWorkshop, installSkillDraft, saveSkillDraft } from './skillWorkshop.mjs'
+import {
+  buildPluginPackDraft,
+  buildSkillDraft,
+  buildSkillWorkshop,
+  installSkillDraft,
+  savePluginPackDraft,
+  saveSkillDraft,
+} from './skillWorkshop.mjs'
 import { buildWorkspaceSuggestions } from './workspaces.mjs'
 
 const port = Number.parseInt(process.env.COCKPIT_API_PORT ?? '4314', 10)
@@ -73,6 +80,28 @@ createServer(async (request, response) => {
       assertLocalRequest(request)
       const body = await readJsonBody(request)
       sendJson(response, 200, await buildPluginPackDraft(body, paths))
+    } catch (error) {
+      sendJson(response, 400, { ok: false, error: error instanceof Error ? error.message : String(error) })
+    }
+    return
+  }
+
+  if (url.pathname === '/api/skills/plugin-pack/save' && request.method === 'POST') {
+    try {
+      assertLocalRequest(request)
+      const body = await readJsonBody(request)
+      sendJson(
+        response,
+        200,
+        await savePluginPackDraft({
+          pluginName: body.pluginName,
+          displayName: body.displayName,
+          skillNames: body.skillNames,
+          confirm: body.confirm,
+          paths,
+          env: process.env,
+        }),
+      )
     } catch (error) {
       sendJson(response, 400, { ok: false, error: error instanceof Error ? error.message : String(error) })
     }

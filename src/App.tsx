@@ -44,11 +44,12 @@ type ReviewDraft = {
   summary: string
   command: string
   artifactLabel?: string
-  kind?: 'command' | 'skill'
+  kind?: 'command' | 'skill' | 'plugin'
   nextStep: string
-  commandId?: 'agent.add' | 'cron.add'
+  commandId?: 'agent.add' | 'cron.add' | 'gateway.restart' | 'security.audit.deep'
   params?: Record<string, string>
   skillParams?: SkillDraftInput
+  pluginParams?: PluginPackInput
   status?: 'draft' | 'ready' | 'running' | 'succeeded' | 'failed'
   resultMessage?: string
 }
@@ -85,6 +86,24 @@ type SkillInstallResult = {
   installedAt?: string
   path?: string
   alreadyInstalled?: boolean
+  message?: string
+  error?: string
+}
+
+type PluginPackInput = {
+  pluginName: string
+  displayName: string
+  skillNames: string[]
+}
+
+type PluginPackSaveResult = {
+  ok: boolean
+  savedAt?: string
+  pluginName?: string
+  displayName?: string
+  skillCount?: number
+  path?: string
+  files?: string[]
   message?: string
   error?: string
 }
@@ -349,7 +368,7 @@ const sectionCopy = {
   skills: {
     label: 'Build skills',
     title: 'Shape OpenClaw with beginner-friendly skills.',
-    detail: 'See local skills, draft new SKILL.md files, and keep plugin packaging as a reviewed next step.',
+    detail: 'See local skills, draft new SKILL.md files, and package reviewed skill groups.',
   },
   runs: {
     label: 'Review runs',
@@ -491,6 +510,24 @@ function warningGuide(check: DoctorCheck) {
     ignore: 'Maybe for a short time, but give it a next step so it does not become mystery noise.',
     next: check.command ? 'Review the suggested command when you are ready.' : 'Use the detail text to decide the smallest safe fix.',
   }
+}
+
+function warningRecipe(check: DoctorCheck): Pick<ReviewDraft, 'commandId' | 'params' | 'nextStep'> | null {
+  if (check.id === 'gateway' || check.id === 'service' || check.command === 'openclaw gateway restart') {
+    return {
+      commandId: 'gateway.restart',
+      params: {},
+      nextStep: 'Restart only after confirming OpenClaw is the local instance you want Cockpit to repair.',
+    }
+  }
+  if (check.id === 'security-posture' || check.command === 'openclaw security audit --deep') {
+    return {
+      commandId: 'security.audit.deep',
+      params: {},
+      nextStep: 'Run the audit, then use the result as the current source truth before changing settings.',
+    }
+  }
+  return null
 }
 
 function App() {
@@ -670,6 +707,32 @@ function App() {
         return
       }
 
+      if (reviewDraft.kind === 'plugin') {
+        const response = await fetch('/api/skills/plugin-pack/save', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            confirm: 'SAVE',
+            ...(reviewDraft.pluginParams ?? {}),
+          }),
+        })
+        const result = (await response.json()) as PluginPackSaveResult
+        if (!response.ok || !result.ok) throw new Error(result.error || `Plugin pack save returned HTTP ${response.status}`)
+        setSavedDrafts((current) => [
+          {
+            ...reviewDraft,
+            id: `${reviewDraft.title}-${Date.now()}`,
+            savedAt: result.savedAt ? new Date(result.savedAt).toLocaleTimeString() : 'just now',
+            status: 'ready',
+            resultMessage: result.path,
+          },
+          ...current,
+        ])
+        setReviewNotice(`Saved plugin pack: ${result.path}`)
+        setReviewDraft(null)
+        return
+      }
+
       setSavedDrafts((current) => [
         {
           ...reviewDraft,
@@ -769,24 +832,27 @@ function App() {
   const draftPluginPack = async (skillNames: string[]) => {
     setReviewNotice('')
     setRunResult(null)
+    const pluginParams = {
+      pluginName: 'claw-cockpit-starter-pack',
+      displayName: 'Claw Cockpit Starter Pack',
+      skillNames,
+    }
     try {
       const response = await fetch('/api/skills/plugin-pack/draft', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          pluginName: 'claw-cockpit-starter-pack',
-          displayName: 'Claw Cockpit Starter Pack',
-          skillNames,
-        }),
+        body: JSON.stringify(pluginParams),
       })
       const draft = await response.json()
       if (!response.ok) throw new Error(draft.error || `Plugin draft returned HTTP ${response.status}`)
       openReview({
         title: draft.displayName,
-        summary: `Drafts a plugin pack with ${draft.skillCount} saved skill draft${draft.skillCount === 1 ? '' : 's'}. Nothing is written yet.`,
+        summary: `Writes a plugin pack with ${draft.skillCount} saved skill draft${draft.skillCount === 1 ? '' : 's'} after this review step.`,
         command: draft.preview,
         artifactLabel: 'Plugin pack preview',
-        nextStep: 'Review the skills and metadata before adding a saved plugin-pack step.',
+        kind: 'plugin',
+        pluginParams,
+        nextStep: 'Save only after the manifest and included skill drafts look right.',
       })
     } catch (error) {
       setReviewNotice(error instanceof Error ? error.message : 'Could not draft the plugin pack.')
@@ -1138,30 +1204,7 @@ function DashboardPage({
             </p>
             <div className="check-list">
               {priorityChecks.map((check) => (
-                <div className="check-row" key={check.id}>
-                  <span className={`check-dot ${check.state}`} />
-                  <div>
-                    <strong>{check.title}</strong>
-                    <p>{check.detail}</p>
-                    {check.state !== 'healthy' && (
-                      <div className="warning-guide">
-                        <span>
-                          <strong>What this means</strong>
-                          {warningGuide(check).meaning}
-                        </span>
-                        <span>
-                          <strong>Can I ignore it?</strong>
-                          {warningGuide(check).ignore}
-                        </span>
-                        <span>
-                          <strong>Safest next move</strong>
-                          {warningGuide(check).next}
-                        </span>
-                      </div>
-                    )}
-                    {check.command && <code>{check.command}</code>}
-                  </div>
-                </div>
+                <WarningCheckRow check={check} key={check.id} onReviewCommand={onReviewCommand} />
               ))}
             </div>
           </article>
@@ -1518,9 +1561,9 @@ function DashboardPage({
             </article>
 
             <article className="panel">
-              <PanelHeader icon={<PlugZap size={19} />} title="Plugin pack builder" action="Preview" />
+              <PanelHeader icon={<PlugZap size={19} />} title="Plugin pack builder" action="Review" />
               <p className="panel-copy">
-                Bundle saved skill drafts into a plugin-pack preview. This drafts the shape only; it does not write a plugin folder yet.
+                Bundle saved skill drafts into a plugin folder after reviewing the manifest and included files.
               </p>
               <button
                 className="section-jump skill-draft-action"
@@ -1955,6 +1998,61 @@ function Metric({
   )
 }
 
+function WarningCheckRow({
+  check,
+  onReviewCommand,
+}: {
+  check: DoctorCheck
+  onReviewCommand: (draft: ReviewDraft) => void
+}) {
+  const guide = warningGuide(check)
+  const recipe = warningRecipe(check)
+  const command = recipe?.commandId === 'gateway.restart' ? 'openclaw gateway restart' : recipe?.commandId === 'security.audit.deep' ? 'openclaw security audit --deep' : check.command
+
+  return (
+    <div className="check-row">
+      <span className={`check-dot ${check.state}`} />
+      <div>
+        <strong>{check.title}</strong>
+        <p>{check.detail}</p>
+        {check.state !== 'healthy' && (
+          <div className="warning-guide">
+            <span>
+              <strong>What this means</strong>
+              {guide.meaning}
+            </span>
+            <span>
+              <strong>Can I ignore it?</strong>
+              {guide.ignore}
+            </span>
+            <span>
+              <strong>Safest next move</strong>
+              {recipe ? 'Review the fix below. It uses a server-side command ID, not browser shell text.' : guide.next}
+            </span>
+          </div>
+        )}
+        {recipe && command ? (
+          <CommandPreview
+            command={command}
+            onReview={() =>
+              onReviewCommand({
+                title: check.title,
+                summary: check.detail,
+                command,
+                commandId: recipe.commandId,
+                params: recipe.params,
+                nextStep: recipe.nextStep,
+              })
+            }
+          />
+        ) : (
+          check.command && <code>{check.command}</code>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function PanelHeader({
   icon,
   title,
@@ -1991,6 +2089,14 @@ function ReviewDrawer({
   onRun: () => void
 }) {
   const canRun = Boolean(draft.commandId)
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [onClose])
+
   return (
     <div className="review-backdrop" role="presentation">
       <aside className="review-drawer" aria-label="Review setup draft">
@@ -2045,7 +2151,13 @@ function ReviewDrawer({
             Keep editing
           </button>
           <button type="button" className="primary-action" onClick={onMarkReady} disabled={isRunning}>
-            {isRunning ? 'Saving...' : draft.kind === 'skill' ? 'Save skill draft' : 'Save reviewed draft'}
+            {isRunning
+              ? 'Saving...'
+              : draft.kind === 'skill'
+                ? 'Save skill draft'
+                : draft.kind === 'plugin'
+                  ? 'Save plugin pack'
+                  : 'Save reviewed draft'}
           </button>
           <button type="button" className="run-action" onClick={onRun} disabled={!canRun || isRunning}>
             <Play size={15} />

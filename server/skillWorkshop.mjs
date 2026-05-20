@@ -179,6 +179,78 @@ export async function installSkillDraft({ skillName, confirm, paths, env }) {
 }
 
 export async function buildPluginPackDraft({ pluginName, displayName, skillNames = [] }, paths) {
+  const pack = await buildPluginPack({ pluginName, displayName, skillNames }, paths)
+  return {
+    pluginName: pack.pluginName,
+    displayName: pack.displayName,
+    skillCount: pack.selectedDrafts.length,
+    pathPreview: `~/.openclaw/claw-cockpit/plugin-packs/${pack.pluginName}`,
+    preview: pluginPackPreview(pack),
+  }
+}
+
+export async function savePluginPackDraft({ pluginName, displayName, skillNames = [], confirm, paths, env }) {
+  if (confirm !== 'SAVE') throw new Error('Type SAVE to confirm this reviewed plugin pack.')
+  const pack = await buildPluginPack({ pluginName, displayName, skillNames }, paths)
+  const targetRoot = env.COCKPIT_PLUGIN_PACK_DIR || join(paths.openclawHome, 'claw-cockpit', 'plugin-packs')
+  const pluginDir = join(targetRoot, pack.pluginName)
+  const manifestPath = join(pluginDir, '.codex-plugin', 'plugin.json')
+  const metadataPath = join(pluginDir, 'claw-cockpit-plugin-pack.json')
+  const savedAt = new Date().toISOString()
+
+  const files = [
+    { path: manifestPath, contents: `${JSON.stringify(pack.manifest, null, 2)}\n` },
+    {
+      path: metadataPath,
+      allowUpdate: true,
+      contents: `${JSON.stringify(
+        {
+          pluginName: pack.pluginName,
+          displayName: pack.displayName,
+          savedAt,
+          skills: pack.selectedDrafts.map((draft) => ({
+            skillName: draft.skillName,
+            displayName: draft.displayName,
+            sourcePath: draft.path,
+          })),
+        },
+        null,
+        2,
+      )}\n`,
+    },
+    ...(await Promise.all(
+      pack.selectedDrafts.map(async (draft) => ({
+        path: join(pluginDir, 'skills', draft.skillName, 'SKILL.md'),
+        contents: await readFile(join(skillDraftRoot(paths), draft.skillName, 'SKILL.md'), 'utf8'),
+      })),
+    )),
+  ]
+
+  for (const file of files) {
+    const existing = await readFile(file.path, 'utf8').catch(() => '')
+    if (existing && existing !== file.contents && !file.allowUpdate) {
+      throw new Error(`A different file already exists at ${file.path}. Review it before replacing anything.`)
+    }
+  }
+
+  for (const file of files) {
+    await mkdir(dirname(file.path), { recursive: true })
+    await writeFile(file.path, file.contents)
+  }
+
+  return {
+    ok: true,
+    pluginName: pack.pluginName,
+    displayName: pack.displayName,
+    skillCount: pack.selectedDrafts.length,
+    savedAt,
+    path: pluginDir,
+    files: files.map((file) => file.path),
+    message: `Saved plugin pack to ${pluginDir}`,
+  }
+}
+
+async function buildPluginPack({ pluginName, displayName, skillNames = [] }, paths) {
   const safePluginName = normalizeSkillName(pluginName || 'claw-cockpit-skill-pack')
   const title = validatePlainText(displayName || titleFromSlug(safePluginName), 'Plugin display name', 80)
   const selectedNames = (Array.isArray(skillNames) ? skillNames : [])
@@ -201,25 +273,28 @@ export async function buildPluginPackDraft({ pluginName, displayName, skillNames
     category: 'Productivity',
   }
 
-  const preview = [
-    `${safePluginName}/`,
-    '  .codex-plugin/plugin.json',
-    ...selectedDrafts.map((draft) => `  skills/${draft.skillName}/SKILL.md`),
-    '',
-    '.codex-plugin/plugin.json',
-    JSON.stringify(manifest, null, 2),
-    '',
-    'Included skills',
-    ...selectedDrafts.map((draft) => `- ${draft.displayName}: ${draft.path}`),
-  ].join('\n')
-
   return {
     pluginName: safePluginName,
     displayName: title,
-    skillCount: selectedDrafts.length,
-    pathPreview: `~/.openclaw/claw-cockpit/plugin-packs/${safePluginName}`,
-    preview,
+    selectedDrafts,
+    manifest,
   }
+}
+
+function pluginPackPreview(pack) {
+  const preview = [
+    `${pack.pluginName}/`,
+    '  .codex-plugin/plugin.json',
+    ...pack.selectedDrafts.map((draft) => `  skills/${draft.skillName}/SKILL.md`),
+    '',
+    '.codex-plugin/plugin.json',
+    JSON.stringify(pack.manifest, null, 2),
+    '',
+    'Included skills',
+    ...pack.selectedDrafts.map((draft) => `- ${draft.displayName}: ${draft.path}`),
+  ].join('\n')
+
+  return preview
 }
 
 function skillRoots(env) {

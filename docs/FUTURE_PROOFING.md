@@ -51,7 +51,7 @@ When any of these change, the UI should show a drift warning instead of pretendi
 - Write/run endpoints must use server-side command IDs and allowlisted `execFile` argument templates. Never execute command strings sent from the browser.
 - Every new runnable command needs fixture or dry-run smoke coverage.
 - Skill Workshop installs must stay saved-draft-only, require explicit confirmation, and refuse conflicting existing files.
-- Plugin pack creation must stay preview-only until it has a package writer with validation and smoke coverage.
+- Plugin pack creation must stay reviewed-file-only, require explicit confirmation, and refuse conflicting existing files.
 - Workspace suggestions should come from local source truth and should filter empty wrapper folders so beginners choose real projects.
 
 ## Smoke Check
@@ -90,6 +90,6 @@ Keep beginner words visible first:
 - Review = safe command preview
 - Run = reviewed command ID plus validated fields
 - Skill = reusable instructions OpenClaw/Codex can load
-- Plugin pack = grouped skills and metadata for sharing later
+- Plugin pack = grouped skills and metadata written after review
 
 Technical names can appear in command previews and source labels.

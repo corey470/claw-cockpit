@@ -34,7 +34,7 @@ Paths:
 
 This is the translator between OpenClaw and the UI. It reads the OpenClaw CLI, gateway, config, and reminder files, then sends the browser a safer summary.
 
-It also reads local skill folders, creates skill drafts, saves reviewed drafts under the Cockpit draft folder, installs saved drafts through a narrow server path, previews plugin packs, and suggests local project folders for helper setup.
+It also reads local skill folders, creates skill drafts, saves reviewed drafts under the Cockpit draft folder, installs saved drafts through a narrow server path, writes reviewed plugin packs, and suggests local project folders for helper setup.
 
 When OpenClaw changes, fix the adapter first.
 
@@ -80,6 +80,6 @@ Good next steps are small and concrete:
 - explain one OpenClaw concept in plain English
 - add one skill quality check
 - improve the saved-draft install review copy
-- turn the plugin-pack preview into a safe writer
+- add a marketplace entry preview for saved plugin packs
 - move one adapter responsibility into a smaller file
 - add one allowlisted command with validation and dry-run coverage

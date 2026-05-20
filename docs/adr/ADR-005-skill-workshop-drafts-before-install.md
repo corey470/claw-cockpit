@@ -17,11 +17,11 @@ Claw Cockpit will start Skill Workshop as a read-and-draft surface:
 - generate `SKILL.md` previews from plain-English fields
 - save reviewed drafts under `~/.openclaw/claw-cockpit/skill-drafts/`
 - install only an already-saved draft through a validated server-side file-write path
-- preview plugin pack files from saved drafts before any package folder is written
+- preview plugin pack files from saved drafts before writing a package folder
 
 Skill install requires explicit confirmation, validates the skill name, copies only from the Cockpit draft folder, and refuses to overwrite a different existing `SKILL.md`.
 
-Plugin packaging is not runnable until it has a server-side package writer with validation and smoke coverage.
+Plugin packaging uses a server-side package writer with validation and smoke coverage. It writes only reviewed files and refuses conflicting existing files.
 
 ## Consequences
 

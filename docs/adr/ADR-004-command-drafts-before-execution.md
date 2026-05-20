@@ -28,4 +28,4 @@ The browser must never send an arbitrary shell command to run.
 - Beginner users can review safely before anything changes.
 - Current command previews must match the live CLI shape or be labeled as non-runnable draft wording.
 - Run buttons are available only when a draft has a supported command ID.
-- Warning/doctor commands stay preview-only until each action gets its own catalog entry.
+- Warning/doctor commands stay preview-only until each action gets its own catalog entry. Gateway restart and deep security audit are the first runnable warning fixes.

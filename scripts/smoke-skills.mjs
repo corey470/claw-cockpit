@@ -67,6 +67,25 @@ const pluginDraft = await pluginResponse.json()
 if (!pluginResponse.ok) throw new Error(pluginDraft.error || `plugin draft returned HTTP ${pluginResponse.status}`)
 if (!pluginDraft.preview?.includes('.codex-plugin/plugin.json')) throw new Error('plugin draft missing manifest preview')
 
+const pluginSaveResponse = await fetch(`${baseUrl}/api/skills/plugin-pack/save`, {
+  method: 'POST',
+  headers: {
+    'content-type': 'application/json',
+    origin: baseUrl,
+  },
+  body: JSON.stringify({
+    confirm: 'SAVE',
+    pluginName: 'starter-skill-pack',
+    displayName: 'Starter Skill Pack',
+    skillNames: ['repo-status-coach'],
+  }),
+})
+const pluginSaved = await pluginSaveResponse.json()
+if (!pluginSaveResponse.ok) throw new Error(pluginSaved.error || `plugin save returned HTTP ${pluginSaveResponse.status}`)
+if (!pluginSaved.files?.some((path) => path.endsWith('/.codex-plugin/plugin.json'))) {
+  throw new Error('plugin save did not write a manifest path')
+}
+
 const installResponse = await fetch(`${baseUrl}/api/skills/drafts/install`, {
   method: 'POST',
   headers: {
@@ -92,6 +111,7 @@ console.log(
       saved: saved.path,
       savedDrafts: refreshed.counts.savedDrafts,
       pluginPack: pluginDraft.pathPreview,
+      pluginSaved: pluginSaved.path,
       installed: installed.path,
     },
     null,

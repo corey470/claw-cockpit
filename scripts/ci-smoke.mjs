@@ -8,11 +8,13 @@ const webPort = '4520'
 const fixtureDir = join(root, 'fixtures', 'openclaw-current')
 const smokeOpenClawHome = join(root, '.tmp', 'openclaw-smoke')
 const smokeInstallSkillDir = join(root, '.tmp', 'installed-skills')
+const smokePluginPackDir = join(root, '.tmp', 'plugin-packs')
 const viteBin = join(root, 'node_modules', '.bin', 'vite')
 const env = {
   ...process.env,
   OPENCLAW_HOME: smokeOpenClawHome,
   COCKPIT_INSTALL_SKILL_DIR: smokeInstallSkillDir,
+  COCKPIT_PLUGIN_PACK_DIR: smokePluginPackDir,
   COCKPIT_API_PORT: apiPort,
   COCKPIT_FIXTURE_DIR: fixtureDir,
   COCKPIT_API_TARGET: `http://127.0.0.1:${apiPort}`,

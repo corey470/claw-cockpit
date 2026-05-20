@@ -45,6 +45,16 @@ try {
   await page.getByRole('button', { name: /Save skill draft/i }).click()
   await page.getByText(/Saved skill draft:/i).waitFor()
 
+  await page.getByRole('button', { name: /Build skills/i }).click()
+  await page.getByRole('button', { name: /Review plugin pack draft/i }).waitFor()
+  await page.getByRole('button', { name: /Review plugin pack draft/i }).click()
+  await page.getByText('Plugin pack preview').waitFor()
+  await page.keyboard.press('Escape')
+  await page.getByLabel('Review setup draft').waitFor({ state: 'hidden' })
+  await page.getByRole('button', { name: /Review plugin pack draft/i }).click()
+  await page.getByRole('button', { name: /Save plugin pack/i }).click()
+  await page.getByText(/Saved plugin pack:/i).waitFor()
+
   const desktopOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
   )

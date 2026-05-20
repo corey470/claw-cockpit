@@ -15,11 +15,21 @@ export const commandCatalog = {
     title: 'Create OpenClaw reminder',
     description: 'Adds one scheduled OpenClaw reminder for an existing helper.',
   },
+  'gateway.restart': {
+    title: 'Restart OpenClaw gateway',
+    description: 'Restarts the local OpenClaw gateway when the control surface is not reachable.',
+  },
+  'security.audit.deep': {
+    title: 'Run deep security audit',
+    description: 'Runs the OpenClaw security audit so warnings can be reviewed from current source truth.',
+  },
 }
 
 export function buildCommandDraft(commandId, params = {}) {
   if (commandId === 'agent.add') return buildAgentAdd(params)
   if (commandId === 'cron.add') return buildCronAdd(params)
+  if (commandId === 'gateway.restart') return buildGatewayRestart()
+  if (commandId === 'security.audit.deep') return buildSecurityAuditDeep()
   throw new Error(`Unsupported command id: ${commandId}`)
 }
 
@@ -125,6 +135,24 @@ function buildCronAdd(params) {
   ]
   return {
     commandId: 'cron.add',
+    args,
+    preview: `openclaw ${args.map(quoteArg).join(' ')}`,
+  }
+}
+
+function buildGatewayRestart() {
+  const args = ['gateway', 'restart']
+  return {
+    commandId: 'gateway.restart',
+    args,
+    preview: `openclaw ${args.map(quoteArg).join(' ')}`,
+  }
+}
+
+function buildSecurityAuditDeep() {
+  const args = ['security', 'audit', '--deep']
+  return {
+    commandId: 'security.audit.deep',
     args,
     preview: `openclaw ${args.map(quoteArg).join(' ')}`,
   }

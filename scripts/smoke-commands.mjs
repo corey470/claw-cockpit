@@ -28,7 +28,29 @@ const run = await post('/api/commands/run', {
 if (!run.ok) throw new Error(run.error || 'cron.add dry-run failed')
 if (!run.dryRun) throw new Error('command smoke should always dry-run')
 
-console.log(JSON.stringify({ ok: true, preview: preview.preview, dryRun: Boolean(run.dryRun) }, null, 2))
+for (const commandId of ['gateway.restart', 'security.audit.deep']) {
+  const warningFix = await post('/api/commands/run', {
+    commandId,
+    confirm: 'RUN',
+    dryRun: true,
+    params: {},
+  })
+  if (!warningFix.ok) throw new Error(warningFix.error || `${commandId} dry-run failed`)
+  if (!warningFix.dryRun) throw new Error(`${commandId} smoke should always dry-run`)
+}
+
+console.log(
+  JSON.stringify(
+    {
+      ok: true,
+      preview: preview.preview,
+      dryRun: Boolean(run.dryRun),
+      warningFixes: ['gateway.restart', 'security.audit.deep'],
+    },
+    null,
+    2,
+  ),
+)
 
 async function post(path, body) {
   const response = await fetch(`${baseUrl}${path}`, {
