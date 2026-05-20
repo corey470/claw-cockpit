@@ -169,6 +169,8 @@ See `docs/FUTURE_PROOFING.md` for the compatibility contract, drift risks, and s
 
 The adapter is split into source readers, parsers, compatibility scoring, and overview normalization. Start with `docs/BEGINNER_MAP.md` if you are new to the codebase.
 
+Current source truth lives in `docs/CURRENT_STATUS.md`.
+
 Architecture decisions live in `docs/adr/`:
 
 - adapter anti-corruption layer
@@ -178,6 +180,10 @@ Architecture decisions live in `docs/adr/`:
 - skill workshop drafts before install
 
 ## Current Readiness
+
+Last implementation baseline verified on May 20, 2026 at commit `1360100`.
+
+GitHub Actions passed for that baseline: [Validate run 26154105049](https://github.com/corey470/claw-cockpit/actions/runs/26154105049).
 
 Claw Cockpit is now ready for real local work as a review-first OpenClaw cockpit:
 

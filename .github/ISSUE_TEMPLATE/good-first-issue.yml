@@ -25,6 +25,7 @@ body:
         - Fix warnings
         - Create helper
         - Add reminder
+        - Build skills
         - Review runs
         - Safety & drift
         - Docs

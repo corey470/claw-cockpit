@@ -18,5 +18,10 @@ Which OpenClaw task does this make easier?
 npm run lint
 npm run build
 npm run smoke:overview
+npm run smoke:workspaces
+npm run smoke:commands
+npm run smoke:skills
 npm run smoke:ui
 ```
+
+Use `npm run ci:smoke` for the full fixture-backed check.

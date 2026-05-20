@@ -82,4 +82,4 @@ Good next steps are small and concrete:
 - improve the saved-draft install review copy
 - add a marketplace entry preview for saved plugin packs
 - move one adapter responsibility into a smaller file
-- add one allowlisted command with validation and dry-run coverage
+- add one more allowlisted warning fix with validation and dry-run coverage
