@@ -50,7 +50,9 @@ When any of these change, the UI should show a drift warning instead of pretendi
 - Version the adapter contract and fail smoke checks when the schema changes.
 - Write/run endpoints must use server-side command IDs and allowlisted `execFile` argument templates. Never execute command strings sent from the browser.
 - Every new runnable command needs fixture or dry-run smoke coverage.
-- Skill Workshop install/export/plugin actions must stay saved-draft-only until they use the same command ID boundary.
+- Skill Workshop installs must stay saved-draft-only, require explicit confirmation, and refuse conflicting existing files.
+- Plugin pack creation must stay preview-only until it has a package writer with validation and smoke coverage.
+- Workspace suggestions should come from local source truth and should filter empty wrapper folders so beginners choose real projects.
 
 ## Smoke Check
 
@@ -58,6 +60,7 @@ Run this while the dev server is up:
 
 ```bash
 npm run smoke:overview
+npm run smoke:workspaces
 ```
 
 Run this when OpenClaw is not available, such as in GitHub Actions:
@@ -73,6 +76,8 @@ It checks that `/api/overview` still returns the expected compatibility contract
 - accurate helper count
 - compatibility posture
 - key compatibility checks
+
+The workspace smoke check verifies that `/api/workspaces` returns absolute local folder paths, which protects the helper setup flow from blank or relative path choices.
 
 ## UI Copy Rule
 

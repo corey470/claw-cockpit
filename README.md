@@ -24,7 +24,9 @@ Make OpenClaw easier to operate without hiding the real system:
 - translate warnings into next steps
 - draft helper and reminder commands from current CLI shape
 - run reviewed helper/reminder setup through server-side allowlisted commands
-- inventory local skills and draft new `SKILL.md` files without installing them
+- inventory local skills, draft new `SKILL.md` files, and install reviewed saved drafts
+- preview a plugin pack from saved skill drafts without writing package files
+- suggest real local workspace folders when setting up helpers
 - show history, compatibility, and safety signals
 - keep the adapter open enough for contributors to extend
 
@@ -62,8 +64,10 @@ For now, replies are local guide rails only. They do not call a helper or change
 4. Use `Plan a change` when you want a setup command drafted in plain English.
 5. Use `Fix warnings` when OpenClaw reports something confusing.
 6. Use `Create helper` or `Add reminder` to draft setup work before anything runs.
-7. Use `Build skills` when you want to shape OpenClaw with a new reviewed skill draft.
-8. Use `Safety & drift` after OpenClaw updates to see what the adapter is worried about.
+7. Use the workspace chips when you want a helper pointed at a real local project folder.
+8. Use `Build skills` when you want to shape OpenClaw with a new reviewed skill draft.
+9. Install a saved skill draft only after the detail panel shows the file and install target you expect.
+10. Use `Safety & drift` after OpenClaw updates to see what the adapter is worried about.
 
 ![Claw Cockpit warning screen](docs/assets/claw-cockpit-fix-warnings.png)
 
@@ -92,8 +96,10 @@ It can:
 - draft a new `SKILL.md` from beginner-friendly fields
 - open the draft in the same review drawer used by command previews
 - save reviewed drafts under `~/.openclaw/claw-cockpit/skill-drafts/`
+- install a saved draft into `~/.codex/skills` or `COCKPIT_INSTALL_SKILL_DIR`
+- preview a starter plugin pack from one or more saved drafts
 
-It does not install skills yet. Saved drafts are working files for review. Install/package actions should use the same reviewed command-catalog pattern before becoming runnable.
+The install action is intentionally narrow: it only copies a saved draft by skill name, refuses conflicting existing `SKILL.md` files, and marks the saved draft as installed. Plugin pack creation is still preview-only so contributors can inspect the manifest and bundled skill files before this repo gains a package writer.
 
 ## Run Locally
 
@@ -114,6 +120,7 @@ With the dev server running, check the adapter contract:
 
 ```bash
 npm run smoke:overview
+npm run smoke:workspaces
 npm run smoke:skills
 npm run smoke:ui
 ```
@@ -129,6 +136,9 @@ The default posture is review-first:
 - `/api/commands/run` accepts only server-side command IDs, validated fields, and explicit confirmation.
 - `/api/skills/draft` returns draft file content only; it does not write or install skills.
 - `/api/skills/drafts/save` regenerates the reviewed draft server-side and writes only under the Cockpit draft folder.
+- `/api/skills/drafts/install` copies only a saved draft, requires explicit confirmation, and refuses to overwrite different existing skill files.
+- `/api/skills/plugin-pack/draft` returns a preview only; it does not write a plugin folder.
+- `/api/workspaces` returns local folder suggestions and never accepts browser-supplied shell commands.
 - command smoke tests use dry-run mode so CI never changes a live OpenClaw install.
 
 ## Open Source Posture
@@ -169,13 +179,16 @@ Architecture decisions live in `docs/adr/`:
 Claw Cockpit is now ready for real local work as a review-first OpenClaw cockpit:
 
 - status, warnings, helpers, reminders, sessions, and drift are readable
+- confusing warnings get a plain-English meaning, ignore-or-not answer, and safest next move
 - helper and reminder setup can be reviewed and run through the safe catalog
-- local skills can be inventoried, reviewed, and saved as `SKILL.md` drafts
+- local skills can be inventoried, reviewed, saved as `SKILL.md` drafts, and installed from saved drafts
+- plugin packs can be previewed from saved drafts before any package files are written
+- helper setup can start from real workspace suggestions instead of manual path guessing
 - command runs are audit-logged under the local OpenClaw home
 - GitHub Actions validates the app with fixtures
 - live local smoke checks validate your machine path
 
-The remaining gap before calling it fully complete is broad command coverage: warning fixes, skill installs, plugin packaging, and more OpenClaw maintenance actions need their own allowlisted templates before they become runnable.
+The remaining gap before calling it fully complete is broad command coverage: warning fixes, plugin package writing, and more OpenClaw maintenance actions need their own allowlisted templates before they become runnable.
 
 ## Irie Product Philosophy
 

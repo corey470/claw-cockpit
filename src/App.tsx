@@ -79,6 +79,16 @@ type SkillSaveResult = {
   error?: string
 }
 
+type SkillInstallResult = {
+  ok: boolean
+  skillName?: string
+  installedAt?: string
+  path?: string
+  alreadyInstalled?: boolean
+  message?: string
+  error?: string
+}
+
 type AgentSummary = {
   id: string
   name: string
@@ -203,6 +213,7 @@ type SkillWorkshop = {
     savedAt: string
     path: string
     installState: string
+    installedPath: string
   }[]
   draftRoot: string
   pluginReadiness: {
@@ -218,6 +229,12 @@ type SkillDraftInput = {
   goal: string
   boundaries: string
   example: string
+}
+
+type WorkspaceSuggestion = {
+  name: string
+  path: string
+  kind: string
 }
 
 const emptyOverview: Overview = {
@@ -454,10 +471,33 @@ function cronPreview(reminderName: string, agent: string, message: string, cron:
   return `openclaw cron add --name ${quoteArg(reminderName)} --agent ${quoteArg(agent)} --message ${quoteArg(message)} --cron ${quoteArg(cron)} --tz ${quoteArg(timezone)}`
 }
 
+function warningGuide(check: DoctorCheck) {
+  if (check.state === 'healthy') {
+    return {
+      meaning: 'This part is working.',
+      ignore: 'Yes. Keep it as proof that the setup is healthy.',
+      next: 'No action needed right now.',
+    }
+  }
+  if (check.state === 'blocked') {
+    return {
+      meaning: 'This can stop OpenClaw or Cockpit from doing useful work.',
+      ignore: 'No. Fix or understand this before adding more automation.',
+      next: check.command ? 'Review the command below before running anything.' : 'Open the setup area and repair this first.',
+    }
+  }
+  return {
+    meaning: 'This is a setup signal, not necessarily a crash.',
+    ignore: 'Maybe for a short time, but give it a next step so it does not become mystery noise.',
+    next: check.command ? 'Review the suggested command when you are ready.' : 'Use the detail text to decide the smallest safe fix.',
+  }
+}
+
 function App() {
   const [activeSection, setActiveSection] = useState<SectionId>('chat')
   const [overview, setOverview] = useState<Overview>(emptyOverview)
   const [skillWorkshop, setSkillWorkshop] = useState<SkillWorkshop>(emptySkillWorkshop)
+  const [workspaceSuggestions, setWorkspaceSuggestions] = useState<WorkspaceSuggestion[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([openingMessage])
@@ -478,11 +518,18 @@ function App() {
     setIsLoading(true)
     setError('')
     try {
-      const [overviewResponse, skillsResponse] = await Promise.all([fetch('/api/overview'), fetch('/api/skills')])
+      const [overviewResponse, skillsResponse, workspacesResponse] = await Promise.all([
+        fetch('/api/overview'),
+        fetch('/api/skills'),
+        fetch('/api/workspaces'),
+      ])
       if (!overviewResponse.ok) throw new Error(`Adapter returned HTTP ${overviewResponse.status}`)
       if (!skillsResponse.ok) throw new Error(`Skills scan returned HTTP ${skillsResponse.status}`)
+      if (!workspacesResponse.ok) throw new Error(`Workspace scan returned HTTP ${workspacesResponse.status}`)
       setOverview((await overviewResponse.json()) as Overview)
       setSkillWorkshop((await skillsResponse.json()) as SkillWorkshop)
+      const workspaces = (await workspacesResponse.json()) as { workspaces: WorkspaceSuggestion[] }
+      setWorkspaceSuggestions(workspaces.workspaces ?? [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not reach the local adapter.')
     } finally {
@@ -492,19 +539,22 @@ function App() {
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([fetch('/api/overview'), fetch('/api/skills')])
-      .then(async ([overviewResponse, skillsResponse]) => {
+    Promise.all([fetch('/api/overview'), fetch('/api/skills'), fetch('/api/workspaces')])
+      .then(async ([overviewResponse, skillsResponse, workspacesResponse]) => {
         if (!overviewResponse.ok) throw new Error(`Adapter returned HTTP ${overviewResponse.status}`)
         if (!skillsResponse.ok) throw new Error(`Skills scan returned HTTP ${skillsResponse.status}`)
+        if (!workspacesResponse.ok) throw new Error(`Workspace scan returned HTTP ${workspacesResponse.status}`)
         return {
           overview: (await overviewResponse.json()) as Overview,
           skills: (await skillsResponse.json()) as SkillWorkshop,
+          workspaces: ((await workspacesResponse.json()) as { workspaces: WorkspaceSuggestion[] }).workspaces ?? [],
         }
       })
       .then((data) => {
         if (!cancelled) {
           setOverview(data.overview)
           setSkillWorkshop(data.skills)
+          setWorkspaceSuggestions(data.workspaces)
         }
       })
       .catch((err: unknown) => {
@@ -699,6 +749,50 @@ function App() {
     }
   }
 
+  const installSkill = async (skillName: string) => {
+    setReviewNotice('')
+    try {
+      const response = await fetch('/api/skills/drafts/install', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ skillName, confirm: 'INSTALL' }),
+      })
+      const result = (await response.json()) as SkillInstallResult
+      if (!response.ok || !result.ok) throw new Error(result.error || `Skill install returned HTTP ${response.status}`)
+      setReviewNotice(result.alreadyInstalled ? `Skill already installed: ${result.path}` : `Installed skill: ${result.path}`)
+      await refresh()
+    } catch (error) {
+      setReviewNotice(error instanceof Error ? error.message : 'Could not install the saved skill draft.')
+    }
+  }
+
+  const draftPluginPack = async (skillNames: string[]) => {
+    setReviewNotice('')
+    setRunResult(null)
+    try {
+      const response = await fetch('/api/skills/plugin-pack/draft', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          pluginName: 'claw-cockpit-starter-pack',
+          displayName: 'Claw Cockpit Starter Pack',
+          skillNames,
+        }),
+      })
+      const draft = await response.json()
+      if (!response.ok) throw new Error(draft.error || `Plugin draft returned HTTP ${response.status}`)
+      openReview({
+        title: draft.displayName,
+        summary: `Drafts a plugin pack with ${draft.skillCount} saved skill draft${draft.skillCount === 1 ? '' : 's'}. Nothing is written yet.`,
+        command: draft.preview,
+        artifactLabel: 'Plugin pack preview',
+        nextStep: 'Review the skills and metadata before adding a saved plugin-pack step.',
+      })
+    } catch (error) {
+      setReviewNotice(error instanceof Error ? error.message : 'Could not draft the plugin pack.')
+    }
+  }
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -795,7 +889,10 @@ function App() {
             onNavigate={setActiveSection}
             savedDrafts={savedDrafts}
             skillWorkshop={skillWorkshop}
+            workspaceSuggestions={workspaceSuggestions}
             onDraftSkill={draftSkill}
+            onInstallSkill={installSkill}
+            onDraftPluginPack={draftPluginPack}
           />
         )}
 
@@ -987,7 +1084,10 @@ function DashboardPage({
   onNavigate,
   savedDrafts,
   skillWorkshop,
+  workspaceSuggestions,
   onDraftSkill,
+  onInstallSkill,
+  onDraftPluginPack,
 }: {
   activeSection: SectionId
   overview: Overview
@@ -996,7 +1096,10 @@ function DashboardPage({
   onNavigate: (section: SectionId) => void
   savedDrafts: SavedDraft[]
   skillWorkshop: SkillWorkshop
+  workspaceSuggestions: WorkspaceSuggestion[]
   onDraftSkill: (input: SkillDraftInput) => void
+  onInstallSkill: (skillName: string) => void
+  onDraftPluginPack: (skillNames: string[]) => void
 }) {
   const [selectedProject, setSelectedProject] = useState(projectTemplates[0])
   const [selectedJob, setSelectedJob] = useState(jobTemplates[0])
@@ -1012,12 +1115,15 @@ function DashboardPage({
   const [skillGoal, setSkillGoal] = useState('check a local repo, explain what changed, and suggest the next safest step')
   const [skillBoundaries, setSkillBoundaries] = useState('Ask before editing files, running commands, installing packages, or touching secrets.')
   const [skillExample, setSkillExample] = useState('Help me understand what changed in this repo and what I should do next.')
+  const [selectedSkillDraft, setSelectedSkillDraft] = useState('')
   const riskChecks = priorityChecks.filter((check) => check.state === 'blocked' || check.state === 'attention')
   const compatibilityRisks = overview.compatibility.checks.filter(
     (check) => check.state === 'blocked' || check.state === 'attention',
   )
   const helperCommand = agentPreview(helperName, helperWorkspace)
   const reminderCommand = cronPreview(reminderName, reminderAgent, reminderMessage, reminderCron, reminderTimezone)
+  const activeSkillDraft =
+    skillWorkshop.drafts.find((draft) => draft.skillName === selectedSkillDraft) ?? skillWorkshop.drafts[0]
 
   if (activeSection === 'doctor') {
     return (
@@ -1037,6 +1143,22 @@ function DashboardPage({
                   <div>
                     <strong>{check.title}</strong>
                     <p>{check.detail}</p>
+                    {check.state !== 'healthy' && (
+                      <div className="warning-guide">
+                        <span>
+                          <strong>What this means</strong>
+                          {warningGuide(check).meaning}
+                        </span>
+                        <span>
+                          <strong>Can I ignore it?</strong>
+                          {warningGuide(check).ignore}
+                        </span>
+                        <span>
+                          <strong>Safest next move</strong>
+                          {warningGuide(check).next}
+                        </span>
+                      </div>
+                    )}
                     {check.command && <code>{check.command}</code>}
                   </div>
                 </div>
@@ -1101,6 +1223,15 @@ function DashboardPage({
                 <span>Workspace folder</span>
                 <input value={helperWorkspace} onChange={(event) => setHelperWorkspace(event.target.value)} />
               </label>
+            </div>
+            <div className="workspace-picker" aria-label="Workspace suggestions">
+              {workspaceSuggestions.length > 0 && <p>Use a detected workspace</p>}
+              {workspaceSuggestions.slice(0, 6).map((workspace) => (
+                <button key={workspace.path} type="button" onClick={() => setHelperWorkspace(workspace.path)}>
+                  <strong>{workspace.name}</strong>
+                  <span>{workspace.kind}</span>
+                </button>
+              ))}
             </div>
             <CommandPreview
               command={helperCommand}
@@ -1328,19 +1459,80 @@ function DashboardPage({
             ) : (
               <div className="skill-list">
                 {skillWorkshop.drafts.slice(0, 5).map((draft) => (
-                  <div className="skill-card" key={`${draft.path}-${draft.savedAt}`}>
+                  <button
+                    className={activeSkillDraft?.skillName === draft.skillName ? 'skill-card active' : 'skill-card'}
+                    key={`${draft.path}-${draft.savedAt}`}
+                    type="button"
+                    onClick={() => setSelectedSkillDraft(draft.skillName)}
+                  >
                     <div>
                       <strong>{draft.displayName}</strong>
                       <p>{draft.installState === 'draft-only' ? 'Saved as a draft. Not installed yet.' : draft.installState}</p>
                       <small>{draft.path}</small>
                     </div>
-                    <span className="quality-pill attention">Draft</span>
-                  </div>
+                    <span className={`quality-pill ${draft.installState === 'installed' ? 'healthy' : 'attention'}`}>
+                      {draft.installState === 'installed' ? 'Installed' : 'Draft'}
+                    </span>
+                  </button>
                 ))}
               </div>
             )}
           </article>
         </section>
+
+        {activeSkillDraft && (
+          <section className="task-grid two-column">
+            <article className="panel wide-panel">
+              <PanelHeader icon={<ClipboardList size={19} />} title="Skill draft detail" action={activeSkillDraft.installState} />
+              <div className="detail-grid">
+                <div>
+                  <span>Saved draft</span>
+                  <strong>{activeSkillDraft.displayName}</strong>
+                  <p>{activeSkillDraft.path}</p>
+                </div>
+                <div>
+                  <span>Install target</span>
+                  <strong>{activeSkillDraft.installedPath ? 'Installed' : 'Not installed'}</strong>
+                  <p>{activeSkillDraft.installedPath || 'Install only after reviewing this saved draft.'}</p>
+                </div>
+              </div>
+              <div className="plain-steps">
+                <div>
+                  <strong>Ready checklist</strong>
+                  <p>Has a saved `SKILL.md`, clear trigger metadata, and a safety boundary before install.</p>
+                </div>
+                <div>
+                  <strong>Install rule</strong>
+                  <p>The install action copies only this saved draft into the configured skills folder.</p>
+                </div>
+              </div>
+              <button
+                className="section-jump"
+                type="button"
+                disabled={activeSkillDraft.installState === 'installed'}
+                onClick={() => onInstallSkill(activeSkillDraft.skillName)}
+              >
+                <Play size={16} />
+                {activeSkillDraft.installState === 'installed' ? 'Already installed' : 'Install saved skill'}
+              </button>
+            </article>
+
+            <article className="panel">
+              <PanelHeader icon={<PlugZap size={19} />} title="Plugin pack builder" action="Preview" />
+              <p className="panel-copy">
+                Bundle saved skill drafts into a plugin-pack preview. This drafts the shape only; it does not write a plugin folder yet.
+              </p>
+              <button
+                className="section-jump skill-draft-action"
+                type="button"
+                onClick={() => onDraftPluginPack(skillWorkshop.drafts.slice(0, 4).map((draft) => draft.skillName))}
+              >
+                <ClipboardList size={16} />
+                Review plugin pack draft
+              </button>
+            </article>
+          </section>
+        )}
 
         <section className="task-grid two-column">
           <article className="panel wide-panel">
@@ -1480,7 +1672,8 @@ function DashboardPage({
           </strong>
           <p>
             The cockpit sees {overview.counts.agents} helpers, {overview.counts.jobs} reminders,{' '}
-            {savedDrafts.length} reviewed drafts, and {overview.counts.sessions} recent sessions.
+            {savedDrafts.length} reviewed setup drafts, {skillWorkshop.counts.savedDrafts} saved skill drafts,
+            and {overview.counts.sessions} recent sessions.
           </p>
         </div>
         <div className="brief-actions">

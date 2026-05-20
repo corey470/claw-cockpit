@@ -116,6 +116,8 @@ nav {
 .icon-button,
 .template,
 .job-option,
+.workspace-picker button,
+.skill-card,
 .command-preview button,
 .message-action,
 .starter-list button,
@@ -1174,6 +1176,7 @@ code {
 .template-list,
 .job-selector,
 .table-list,
+.workspace-picker,
 .skill-list,
 .quality-list {
   min-width: 0;
@@ -1216,6 +1219,49 @@ code {
   font-size: 13px;
 }
 
+.workspace-picker {
+  margin-top: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.workspace-picker p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.workspace-picker button {
+  min-width: 0;
+  border: 1px solid #d9e2f0;
+  border-radius: 8px;
+  padding: 9px;
+  background: #ffffff;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.workspace-picker strong,
+.workspace-picker span {
+  display: block;
+}
+
+.workspace-picker strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ink);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.workspace-picker span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .skill-builder {
   margin-bottom: 12px;
 }
@@ -1235,6 +1281,13 @@ code {
   gap: 12px;
   align-items: start;
   background: #fbfdff;
+  color: inherit;
+  text-align: left;
+}
+
+.skill-card.active {
+  border-color: #93c5fd;
+  background: #eff6ff;
 }
 
 .skill-card strong {
@@ -1283,6 +1336,59 @@ code {
 .quality-pill.blocked {
   background: #fee2e2;
   color: #991b1b;
+}
+
+.detail-grid,
+.warning-guide {
+  display: grid;
+  gap: 8px;
+}
+
+.detail-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 12px;
+}
+
+.detail-grid div,
+.warning-guide span {
+  min-width: 0;
+  border: 1px solid #eef2f7;
+  border-radius: 8px;
+  padding: 9px;
+  background: #fbfdff;
+}
+
+.detail-grid span,
+.warning-guide strong {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 760;
+}
+
+.detail-grid strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.detail-grid p {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.warning-guide {
+  margin-top: 9px;
+}
+
+.warning-guide span {
+  color: #334155;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .template,

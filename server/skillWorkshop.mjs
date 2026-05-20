@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 
@@ -126,9 +126,99 @@ async function readSavedSkillDraft(draftDir) {
       savedAt: metadata.savedAt || '',
       path: metadata.path || join(draftDir, 'SKILL.md'),
       installState: metadata.installState || 'draft-only',
+      installedPath: metadata.installedPath || '',
     }
   } catch {
     return null
+  }
+}
+
+export async function installSkillDraft({ skillName, confirm, paths, env }) {
+  if (confirm !== 'INSTALL') throw new Error('Type INSTALL to confirm this saved skill draft.')
+  const safeName = normalizeSkillName(skillName)
+  const root = skillDraftRoot(paths)
+  const draftDir = join(root, safeName)
+  const skillPath = join(draftDir, 'SKILL.md')
+  const metadataPath = join(draftDir, 'draft.json')
+  const metadata = JSON.parse(await readFile(metadataPath, 'utf8'))
+  const skillText = await readFile(skillPath, 'utf8')
+  const targetRoot = env.COCKPIT_INSTALL_SKILL_DIR || join(homedir(), '.codex', 'skills')
+  const targetDir = join(targetRoot, safeName)
+  const targetPath = join(targetDir, 'SKILL.md')
+  const installedAt = new Date().toISOString()
+
+  await mkdir(targetDir, { recursive: true })
+  const existing = await readFile(targetPath, 'utf8').catch(() => '')
+  if (existing && existing !== skillText) {
+    throw new Error('A different skill already exists at the install path. Review it before replacing anything.')
+  }
+  if (!existing) await copyFile(skillPath, targetPath)
+
+  await writeFile(
+    metadataPath,
+    `${JSON.stringify(
+      {
+        ...metadata,
+        installState: 'installed',
+        installedAt,
+        installedPath: targetPath,
+      },
+      null,
+      2,
+    )}\n`,
+  )
+
+  return {
+    ok: true,
+    skillName: safeName,
+    installedAt,
+    path: targetPath,
+    alreadyInstalled: Boolean(existing),
+    message: existing ? `Skill was already installed at ${targetPath}` : `Installed skill to ${targetPath}`,
+  }
+}
+
+export async function buildPluginPackDraft({ pluginName, displayName, skillNames = [] }, paths) {
+  const safePluginName = normalizeSkillName(pluginName || 'claw-cockpit-skill-pack')
+  const title = validatePlainText(displayName || titleFromSlug(safePluginName), 'Plugin display name', 80)
+  const selectedNames = (Array.isArray(skillNames) ? skillNames : [])
+    .map((name) => normalizeSkillName(name))
+    .slice(0, 12)
+  const drafts = await readSavedSkillDrafts(paths)
+  const selectedDrafts = drafts.filter((draft) => selectedNames.includes(draft.skillName))
+  if (selectedDrafts.length === 0) throw new Error('Choose at least one saved skill draft for the plugin pack.')
+
+  const manifest = {
+    name: safePluginName,
+    interface: {
+      displayName: title,
+    },
+    skills: selectedDrafts.map((draft) => `./skills/${draft.skillName}`),
+    policy: {
+      installation: 'AVAILABLE',
+      authentication: 'ON_INSTALL',
+    },
+    category: 'Productivity',
+  }
+
+  const preview = [
+    `${safePluginName}/`,
+    '  .codex-plugin/plugin.json',
+    ...selectedDrafts.map((draft) => `  skills/${draft.skillName}/SKILL.md`),
+    '',
+    '.codex-plugin/plugin.json',
+    JSON.stringify(manifest, null, 2),
+    '',
+    'Included skills',
+    ...selectedDrafts.map((draft) => `- ${draft.displayName}: ${draft.path}`),
+  ].join('\n')
+
+  return {
+    pluginName: safePluginName,
+    displayName: title,
+    skillCount: selectedDrafts.length,
+    pathPreview: `~/.openclaw/claw-cockpit/plugin-packs/${safePluginName}`,
+    preview,
   }
 }
 

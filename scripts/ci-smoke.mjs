@@ -7,16 +7,19 @@ const apiPort = '4514'
 const webPort = '4520'
 const fixtureDir = join(root, 'fixtures', 'openclaw-current')
 const smokeOpenClawHome = join(root, '.tmp', 'openclaw-smoke')
+const smokeInstallSkillDir = join(root, '.tmp', 'installed-skills')
 const viteBin = join(root, 'node_modules', '.bin', 'vite')
 const env = {
   ...process.env,
   OPENCLAW_HOME: smokeOpenClawHome,
+  COCKPIT_INSTALL_SKILL_DIR: smokeInstallSkillDir,
   COCKPIT_API_PORT: apiPort,
   COCKPIT_FIXTURE_DIR: fixtureDir,
   COCKPIT_API_TARGET: `http://127.0.0.1:${apiPort}`,
   COCKPIT_OVERVIEW_URL: `http://127.0.0.1:${apiPort}/api/overview`,
   COCKPIT_COMMAND_URL: `http://127.0.0.1:${apiPort}`,
   COCKPIT_SKILLS_URL: `http://127.0.0.1:${apiPort}`,
+  COCKPIT_WORKSPACES_URL: `http://127.0.0.1:${apiPort}`,
   COCKPIT_UI_URL: `http://127.0.0.1:${webPort}`,
 }
 
@@ -29,6 +32,7 @@ try {
   await waitFor(`${env.COCKPIT_OVERVIEW_URL}`)
   await waitFor(`${env.COCKPIT_UI_URL}`)
   await run(process.execPath, [join(root, 'scripts', 'smoke-overview.mjs')], env)
+  await run(process.execPath, [join(root, 'scripts', 'smoke-workspaces.mjs')], env)
   await run(process.execPath, [join(root, 'scripts', 'smoke-commands.mjs')], env)
   await run(process.execPath, [join(root, 'scripts', 'smoke-skills.mjs')], env)
   await run(process.execPath, [join(root, 'scripts', 'smoke-ui.mjs')], env)

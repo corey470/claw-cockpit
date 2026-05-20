@@ -51,6 +51,37 @@ const refreshed = await refreshedResponse.json()
 if (!refreshedResponse.ok) throw new Error(refreshed.error || `refreshed skills returned HTTP ${refreshedResponse.status}`)
 if ((refreshed.counts?.savedDrafts ?? 0) < 1) throw new Error('saved draft count did not update')
 
+const pluginResponse = await fetch(`${baseUrl}/api/skills/plugin-pack/draft`, {
+  method: 'POST',
+  headers: {
+    'content-type': 'application/json',
+    origin: baseUrl,
+  },
+  body: JSON.stringify({
+    pluginName: 'starter-skill-pack',
+    displayName: 'Starter Skill Pack',
+    skillNames: ['repo-status-coach'],
+  }),
+})
+const pluginDraft = await pluginResponse.json()
+if (!pluginResponse.ok) throw new Error(pluginDraft.error || `plugin draft returned HTTP ${pluginResponse.status}`)
+if (!pluginDraft.preview?.includes('.codex-plugin/plugin.json')) throw new Error('plugin draft missing manifest preview')
+
+const installResponse = await fetch(`${baseUrl}/api/skills/drafts/install`, {
+  method: 'POST',
+  headers: {
+    'content-type': 'application/json',
+    origin: baseUrl,
+  },
+  body: JSON.stringify({
+    confirm: 'INSTALL',
+    skillName: 'repo-status-coach',
+  }),
+})
+const installed = await installResponse.json()
+if (!installResponse.ok) throw new Error(installed.error || `skill install returned HTTP ${installResponse.status}`)
+if (!installed.path?.endsWith('/repo-status-coach/SKILL.md')) throw new Error('skill install returned an unexpected path')
+
 console.log(
   JSON.stringify(
     {
@@ -60,6 +91,8 @@ console.log(
       draft: draft.pathPreview,
       saved: saved.path,
       savedDrafts: refreshed.counts.savedDrafts,
+      pluginPack: pluginDraft.pathPreview,
+      installed: installed.path,
     },
     null,
     2,

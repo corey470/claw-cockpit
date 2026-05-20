@@ -14,17 +14,19 @@ Browser UI
 ## Current Shape
 
 - `src/App.tsx` renders the task cockpit.
-- `server/index.mjs` exposes `/api/overview`, `/api/skills`, `/api/commands/*`, and `/api/health`.
+- `server/index.mjs` exposes `/api/overview`, `/api/skills`, `/api/workspaces`, `/api/commands/*`, and `/api/health`.
 - `server/openclawSources.mjs` reads live OpenClaw or fixture sources.
 - `server/openclawParsers.mjs` turns CLI/config text into smaller facts.
 - `server/compatibilityScoring.mjs` scores drift, security, and command-surface risk.
 - `server/overviewNormalizer.mjs` returns the browser-safe overview contract.
 - `server/commandCatalog.mjs` owns runnable command IDs, validation, dry-run mode, execution, and audit logs.
-- `server/skillWorkshop.mjs` reads local skills, drafts `SKILL.md` previews, and saves reviewed drafts under the Cockpit draft folder.
+- `server/skillWorkshop.mjs` reads local skills, drafts `SKILL.md` previews, saves reviewed drafts under the Cockpit draft folder, installs saved drafts, and previews plugin packs.
+- `server/workspaces.mjs` suggests local project folders for helper setup without letting the browser provide commands.
 - `scripts/smoke-overview.mjs` checks the adapter contract.
 - `scripts/smoke-ui.mjs` checks desktop/mobile rendering and the review drawer.
 - `scripts/smoke-commands.mjs` checks catalog preview/run behavior without changing live state.
-- `scripts/smoke-skills.mjs` checks skill inventory and draft generation.
+- `scripts/smoke-skills.mjs` checks skill inventory, draft generation, plugin-pack previews, and saved-draft install behavior.
+- `scripts/smoke-workspaces.mjs` checks workspace suggestions return usable absolute paths.
 - `scripts/ci-smoke.mjs` starts fixture-backed adapter and Vite servers for GitHub Actions.
 
 ## Important Boundaries
@@ -32,7 +34,9 @@ Browser UI
 - The browser should receive normalized cockpit data, not raw OpenClaw output.
 - Command previews become execution requests only when they carry a supported server-side command ID.
 - Execution uses `execFile`, validated arguments, local origin checks, explicit confirmation, and audit logging.
-- Skill drafts can be saved only under `~/.openclaw/claw-cockpit/skill-drafts/`; install/package commands are separate future allowlisted actions.
+- Skill drafts can be saved only under `~/.openclaw/claw-cockpit/skill-drafts/`.
+- Skill install can only copy a saved draft to `~/.codex/skills` or `COCKPIT_INSTALL_SKILL_DIR`, requires explicit confirmation, and refuses conflicting existing files.
+- Plugin pack creation is preview-only until a writer gets its own validation and smoke coverage.
 - OpenClaw CLI output should be treated as a changing source, not a permanent API.
 
 ## Adapter Split
@@ -44,7 +48,8 @@ The adapter is split into:
 - `overviewNormalizer`: beginner-facing output
 - `compatibilityScoring`: drift and safety checks
 - `commandCatalog`: capability-backed command drafts and safe execution
-- `skillWorkshop`: local skill inventory, draft generation, and safe draft persistence
+- `skillWorkshop`: local skill inventory, draft generation, safe draft persistence, saved-draft install, and plugin-pack previews
+- `workspaces`: local folder discovery for beginner-friendly helper setup
 
 That split keeps OpenClaw churn away from the UI.
 
@@ -52,4 +57,4 @@ That split keeps OpenClaw churn away from the UI.
 
 Set `COCKPIT_FIXTURE_DIR=fixtures/openclaw-current` to run the adapter without a live OpenClaw install. This is what GitHub Actions uses.
 
-Fixture mode also reads `fixtures/openclaw-current/skills` so skill inventory and Skill Workshop smoke tests work without a local `~/.codex/skills` folder. CI points `OPENCLAW_HOME` at `.tmp/openclaw-smoke` so draft-save smoke tests never touch a real OpenClaw home.
+Fixture mode also reads `fixtures/openclaw-current/skills` so skill inventory and Skill Workshop smoke tests work without a local `~/.codex/skills` folder. CI points `OPENCLAW_HOME` at `.tmp/openclaw-smoke` and `COCKPIT_INSTALL_SKILL_DIR` at `.tmp/installed-skills` so draft-save and install smoke tests never touch a real OpenClaw or Codex skill folder.
