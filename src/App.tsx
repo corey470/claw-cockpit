@@ -1001,7 +1001,7 @@ function DashboardPage({
   const [selectedProject, setSelectedProject] = useState(projectTemplates[0])
   const [selectedJob, setSelectedJob] = useState(jobTemplates[0])
   const [helperName, setHelperName] = useState(projectTemplates[0].helperName)
-  const [helperWorkspace, setHelperWorkspace] = useState('/Users/irieagent/Documents/New project 2/claw-cockpit')
+  const [helperWorkspace, setHelperWorkspace] = useState('/Users/irieagent/Documents/Claw Cockpit/claw-cockpit')
   const [reminderName, setReminderName] = useState(jobTemplates[0].name)
   const [reminderAgent, setReminderAgent] = useState('main')
   const [reminderMessage, setReminderMessage] = useState(jobTemplates[0].message)
