@@ -66,6 +66,7 @@ const pluginResponse = await fetch(`${baseUrl}/api/skills/plugin-pack/draft`, {
 const pluginDraft = await pluginResponse.json()
 if (!pluginResponse.ok) throw new Error(pluginDraft.error || `plugin draft returned HTTP ${pluginResponse.status}`)
 if (!pluginDraft.preview?.includes('.codex-plugin/plugin.json')) throw new Error('plugin draft missing manifest preview')
+if (!pluginDraft.preview?.includes('marketplace-entry.json')) throw new Error('plugin draft missing marketplace entry preview')
 
 const pluginSaveResponse = await fetch(`${baseUrl}/api/skills/plugin-pack/save`, {
   method: 'POST',
@@ -84,6 +85,9 @@ const pluginSaved = await pluginSaveResponse.json()
 if (!pluginSaveResponse.ok) throw new Error(pluginSaved.error || `plugin save returned HTTP ${pluginSaveResponse.status}`)
 if (!pluginSaved.files?.some((path) => path.endsWith('/.codex-plugin/plugin.json'))) {
   throw new Error('plugin save did not write a manifest path')
+}
+if (!pluginSaved.files?.some((path) => path.endsWith('/marketplace-entry.json'))) {
+  throw new Error('plugin save did not write a marketplace entry path')
 }
 
 const installResponse = await fetch(`${baseUrl}/api/skills/drafts/install`, {

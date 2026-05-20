@@ -23,6 +23,14 @@ export const commandCatalog = {
     title: 'Run deep security audit',
     description: 'Runs the OpenClaw security audit so warnings can be reviewed from current source truth.',
   },
+  'model.main.set': {
+    title: 'Set main OpenClaw model',
+    description: 'Sets the main helper model to a reviewed OpenAI model value.',
+  },
+  'plugin.discord.install': {
+    title: 'Install Discord plugin',
+    description: 'Installs the reviewed OpenClaw Discord plugin package.',
+  },
 }
 
 export function buildCommandDraft(commandId, params = {}) {
@@ -30,6 +38,8 @@ export function buildCommandDraft(commandId, params = {}) {
   if (commandId === 'cron.add') return buildCronAdd(params)
   if (commandId === 'gateway.restart') return buildGatewayRestart()
   if (commandId === 'security.audit.deep') return buildSecurityAuditDeep()
+  if (commandId === 'model.main.set') return buildMainModelSet(params)
+  if (commandId === 'plugin.discord.install') return buildDiscordPluginInstall(params)
   throw new Error(`Unsupported command id: ${commandId}`)
 }
 
@@ -158,10 +168,46 @@ function buildSecurityAuditDeep() {
   }
 }
 
+function buildMainModelSet(params) {
+  const model = validateModel(params.model || 'openai/gpt-5.4')
+  const args = ['config', 'set', 'agents.list[0].model', JSON.stringify({ primary: model }), '--strict-json']
+  return {
+    commandId: 'model.main.set',
+    args,
+    preview: `openclaw ${args.map(quoteArg).join(' ')}`,
+  }
+}
+
+function buildDiscordPluginInstall(params) {
+  const pluginPackage = validatePluginPackage(params.pluginPackage || '@openclaw/discord')
+  const args = ['plugins', 'install', pluginPackage]
+  return {
+    commandId: 'plugin.discord.install',
+    args,
+    preview: `openclaw ${args.map(quoteArg).join(' ')}`,
+  }
+}
+
 function validateSlug(value, label) {
   const text = String(value ?? '').trim()
   if (!/^[a-z0-9][a-z0-9-]{1,62}$/.test(text)) {
     throw new Error(`${label} must use lowercase letters, numbers, and dashes.`)
+  }
+  return text
+}
+
+function validateModel(value) {
+  const text = String(value ?? '').trim()
+  if (!/^openai\/gpt-[A-Za-z0-9_.-]{2,40}$/.test(text)) {
+    throw new Error('Model must be a reviewed OpenAI model name like openai/gpt-5.4.')
+  }
+  return text
+}
+
+function validatePluginPackage(value) {
+  const text = String(value ?? '').trim()
+  if (text !== '@openclaw/discord') {
+    throw new Error('Only the reviewed OpenClaw Discord plugin package is supported here.')
   }
   return text
 }

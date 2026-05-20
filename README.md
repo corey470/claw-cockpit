@@ -83,7 +83,7 @@ Command previews open a review drawer before anything can become executable. The
 
 Reviewed commands are saved as local setup drafts in the planning flow.
 
-Helper, reminder, gateway restart, and deep security audit drafts can be run from the review drawer after the command passes the server-side catalog. Other warning/doctor commands stay preview-only until each one has its own allowlisted template.
+Helper, reminder, gateway restart, deep security audit, main model repair, and Discord plugin install drafts can be run from the review drawer after the command passes the server-side catalog. Other warning/doctor commands stay preview-only until each one has its own allowlisted template.
 
 ![Claw Cockpit review and run drawer](docs/assets/claw-cockpit-review-run.png)
 
@@ -101,7 +101,7 @@ It can:
 - install a saved draft into `~/.codex/skills` or `COCKPIT_INSTALL_SKILL_DIR`
 - preview and save a starter plugin pack from one or more saved drafts
 
-The install action is intentionally narrow: it only copies a saved draft by skill name, refuses conflicting existing `SKILL.md` files, and marks the saved draft as installed. Plugin pack writing is narrow too: it writes a `.codex-plugin/plugin.json`, copied saved skill files, and Cockpit metadata only after the user reviews the preview.
+The install action is intentionally narrow: it only copies a saved draft by skill name after the review drawer, refuses conflicting existing `SKILL.md` files, and marks the saved draft as installed. Plugin pack writing is narrow too: it writes a `.codex-plugin/plugin.json`, a `marketplace-entry.json`, copied saved skill files, and Cockpit metadata only after the user reviews the preview.
 
 ## Run Locally
 
@@ -181,9 +181,7 @@ Architecture decisions live in `docs/adr/`:
 
 ## Current Readiness
 
-Last implementation baseline verified on May 20, 2026 at commit `1360100`.
-
-GitHub Actions passed for that baseline: [Validate run 26154105049](https://github.com/corey470/claw-cockpit/actions/runs/26154105049).
+Status refreshed on May 20, 2026. Use the badge at the top of this README for the latest GitHub validation.
 
 Claw Cockpit is now ready for real local work as a review-first OpenClaw cockpit:
 
@@ -191,14 +189,14 @@ Claw Cockpit is now ready for real local work as a review-first OpenClaw cockpit
 - confusing warnings get a plain-English meaning, ignore-or-not answer, and safest next move
 - helper and reminder setup can be reviewed and run through the safe catalog
 - local skills can be inventoried, reviewed, saved as `SKILL.md` drafts, and installed from saved drafts
-- plugin packs can be previewed and written from saved drafts
-- gateway restart and deep security audit warning fixes are runnable through reviewed command IDs
+- plugin packs can be previewed and written from saved drafts, including a marketplace entry file
+- gateway restart, deep security audit, main model repair, and Discord plugin install warning fixes are runnable through reviewed command IDs
 - helper setup can start from real workspace suggestions instead of manual path guessing
 - command runs are audit-logged under the local OpenClaw home
 - GitHub Actions validates the app with fixtures
 - live local smoke checks validate your machine path
 
-The remaining gap before calling it fully complete is broad command coverage: plugin installs, config edits, and more OpenClaw maintenance actions need their own allowlisted templates before they become runnable.
+The remaining gap before calling it fully complete is broad command coverage: more config edits, more plugin actions, and more OpenClaw maintenance actions need their own allowlisted templates before they become runnable.
 
 ## Irie Product Philosophy
 

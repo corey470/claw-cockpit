@@ -2,9 +2,7 @@
 
 Last updated: May 20, 2026
 
-Implementation baseline: `1360100 Add plugin pack writer and warning fix actions`
-
-Baseline GitHub validation: passed, [Validate run 26154105049](https://github.com/corey470/claw-cockpit/actions/runs/26154105049)
+This file reflects the current `main` branch after the latest cockpit hardening pass. Use the README badge for the latest GitHub validation result.
 
 ## Verdict
 
@@ -17,11 +15,11 @@ It is not a replacement for OpenClaw Chat. It is the safer control layer for che
 - Reads live OpenClaw status, gateway probe, local config, helpers, reminders, sessions, and compatibility signals.
 - Keeps the UI beginner-readable while adapter code handles OpenClaw churn.
 - Runs helper and reminder setup only through server-side command IDs.
-- Runs gateway restart and deep security audit warning fixes through reviewed command IDs.
+- Runs gateway restart, deep security audit, main model repair, and Discord plugin install warning fixes through reviewed command IDs.
 - Inventories local skills and drafts beginner-friendly `SKILL.md` files.
 - Saves reviewed skill drafts under the Cockpit draft folder.
-- Installs saved skill drafts through a narrow copy-only path.
-- Writes reviewed plugin packs with `.codex-plugin/plugin.json`, copied skill files, and Cockpit metadata.
+- Installs saved skill drafts through the review drawer and a narrow copy-only path.
+- Writes reviewed plugin packs with `.codex-plugin/plugin.json`, `marketplace-entry.json`, copied skill files, and Cockpit metadata.
 - Suggests real local workspace folders for helper setup.
 - Includes README demo media and GitHub issue/PR templates.
 - Validates with local lint/build/smoke checks and GitHub Actions fixture smoke.
@@ -38,12 +36,12 @@ It is not a replacement for OpenClaw Chat. It is the safer control layer for che
 
 These are not launch blockers, but they are the right next improvements:
 
-- Add allowlisted config-edit actions for common OpenClaw setup warnings.
-- Add marketplace entry generation for saved plugin packs.
+- Add allowlisted config-edit actions beyond main model repair.
+- Add a full marketplace writer that can update a chosen `.agents/plugins/marketplace.json`.
 - Add more parser fixtures for future OpenClaw CLI/status changes.
-- Add more warning recipes beyond gateway restart and deep security audit.
-- Improve saved-skill install review copy so beginners understand exactly where the skill is going.
-- Add a broader mobile QA pass once more real users try the cockpit.
+- Add more warning recipes beyond the four current allowlisted fixes.
+- Improve saved-skill install review copy with a side-by-side file preview.
+- Add real-user mobile QA once more people try the cockpit.
 
 ## Verification Commands
 

@@ -12,7 +12,7 @@ Claw Cockpit is a local control surface for OpenClaw. It should stay careful by 
 - Skill Workshop draft features regenerate content server-side and may write only to the Cockpit-owned draft folder.
 - Skill install copies only an already-saved draft by validated skill name, requires explicit confirmation, and refuses to overwrite a different existing `SKILL.md`.
 - Plugin pack creation starts as a preview, then writes only reviewed manifest, skill, and metadata files. It refuses conflicting existing files.
-- Runnable warning fixes are limited to server-side command IDs. Gateway restart and deep security audit are allowlisted; plugin installs and config edits remain preview-only until they have their own validation.
+- Runnable warning fixes are limited to server-side command IDs. Gateway restart, deep security audit, main model repair, and Discord plugin install are allowlisted; other plugin installs and config edits remain preview-only until they have their own validation.
 
 ## Reporting A Problem
 

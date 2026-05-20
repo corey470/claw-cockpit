@@ -41,14 +41,20 @@ try {
   await page.getByRole('button', { name: /Review SKILL.md draft/i }).click()
   await page.getByLabel('Review setup draft').waitFor()
   await page.getByText('SKILL.md preview').waitFor()
-  await page.getByText('This is a draft preview only').waitFor()
+  await page.getByText('This file change uses a server-side reviewed write path.').waitFor()
   await page.getByRole('button', { name: /Save skill draft/i }).click()
   await page.getByText(/Saved skill draft:/i).waitFor()
+
+  await page.getByRole('button', { name: /Build skills/i }).click()
+  await page.getByRole('button', { name: /Install saved skill/i }).click()
+  await page.getByText('Install preview').waitFor()
+  await page.getByRole('button', { name: /Close review/i }).click()
 
   await page.getByRole('button', { name: /Build skills/i }).click()
   await page.getByRole('button', { name: /Review plugin pack draft/i }).waitFor()
   await page.getByRole('button', { name: /Review plugin pack draft/i }).click()
   await page.getByText('Plugin pack preview').waitFor()
+  await page.getByText('marketplace-entry.json').waitFor()
   await page.keyboard.press('Escape')
   await page.getByLabel('Review setup draft').waitFor({ state: 'hidden' })
   await page.getByRole('button', { name: /Review plugin pack draft/i }).click()
@@ -63,6 +69,10 @@ try {
   mobile.on('pageerror', (error) => errors.push(error.message))
   await mobile.goto(url, { waitUntil: 'networkidle' })
   await mobile.getByRole('heading', { name: /Plan changes before OpenClaw runs them/i }).waitFor()
+  await mobile.getByRole('button', { name: /Fix warnings/i }).click()
+  await mobile.getByRole('heading', { name: /Check what needs attention first/i }).waitFor()
+  await mobile.getByRole('button', { name: /Build skills/i }).click()
+  await mobile.getByRole('heading', { name: /Shape OpenClaw with beginner-friendly skills/i }).waitFor()
   const mobileOverflow = await mobile.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
   )

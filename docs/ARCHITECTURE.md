@@ -36,8 +36,8 @@ Browser UI
 - Execution uses `execFile`, validated arguments, local origin checks, explicit confirmation, and audit logging.
 - Skill drafts can be saved only under `~/.openclaw/claw-cockpit/skill-drafts/`.
 - Skill install can only copy a saved draft to `~/.codex/skills` or `COCKPIT_INSTALL_SKILL_DIR`, requires explicit confirmation, and refuses conflicting existing files.
-- Plugin pack creation writes only reviewed package files under the Cockpit plugin-pack folder or `COCKPIT_PLUGIN_PACK_DIR`; conflicting existing files are refused.
-- Warning fixes become runnable only after they get a command catalog ID. Gateway restart and deep security audit are allowlisted.
+- Plugin pack creation writes only reviewed package files under the Cockpit plugin-pack folder or `COCKPIT_PLUGIN_PACK_DIR`; conflicting existing files are refused. Saved packs include `marketplace-entry.json` for later marketplace registration.
+- Warning fixes become runnable only after they get a command catalog ID. Gateway restart, deep security audit, main model repair, and Discord plugin install are allowlisted.
 - OpenClaw CLI output should be treated as a changing source, not a permanent API.
 
 ## Adapter Split

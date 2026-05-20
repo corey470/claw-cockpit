@@ -80,6 +80,6 @@ Good next steps are small and concrete:
 - explain one OpenClaw concept in plain English
 - add one skill quality check
 - improve the saved-draft install review copy
-- add a marketplace entry preview for saved plugin packs
+- add a full marketplace writer for a chosen `.agents/plugins/marketplace.json`
 - move one adapter responsibility into a smaller file
 - add one more allowlisted warning fix with validation and dry-run coverage

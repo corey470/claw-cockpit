@@ -30,9 +30,9 @@ export async function buildSkillWorkshop({ env, fixtureDir, paths }) {
       state: sorted.length > 0 ? 'attention' : 'unknown',
       summary:
         sorted.length > 0
-          ? 'Skills are available. Plugin packaging should stay draft-only until install paths are explicit.'
+          ? 'Skills are available. Plugin packaging writes reviewed local files after preview.'
           : 'No skills were found in the scanned roots.',
-      nextStep: 'Draft skills first, then package related skills as a plugin pack after the shape is stable.',
+      nextStep: 'Draft skills first, then save related skills as a reviewed plugin pack after the shape is stable.',
     },
   }
 }
@@ -195,11 +195,13 @@ export async function savePluginPackDraft({ pluginName, displayName, skillNames 
   const targetRoot = env.COCKPIT_PLUGIN_PACK_DIR || join(paths.openclawHome, 'claw-cockpit', 'plugin-packs')
   const pluginDir = join(targetRoot, pack.pluginName)
   const manifestPath = join(pluginDir, '.codex-plugin', 'plugin.json')
+  const marketplacePath = join(pluginDir, 'marketplace-entry.json')
   const metadataPath = join(pluginDir, 'claw-cockpit-plugin-pack.json')
   const savedAt = new Date().toISOString()
 
   const files = [
     { path: manifestPath, contents: `${JSON.stringify(pack.manifest, null, 2)}\n` },
+    { path: marketplacePath, contents: `${JSON.stringify(pack.marketplace, null, 2)}\n` },
     {
       path: metadataPath,
       allowUpdate: true,
@@ -272,12 +274,25 @@ async function buildPluginPack({ pluginName, displayName, skillNames = [] }, pat
     },
     category: 'Productivity',
   }
+  const marketplace = {
+    name: safePluginName,
+    source: {
+      source: 'local',
+      path: `./plugins/${safePluginName}`,
+    },
+    policy: {
+      installation: 'AVAILABLE',
+      authentication: 'ON_INSTALL',
+    },
+    category: 'Productivity',
+  }
 
   return {
     pluginName: safePluginName,
     displayName: title,
     selectedDrafts,
     manifest,
+    marketplace,
   }
 }
 
@@ -285,10 +300,14 @@ function pluginPackPreview(pack) {
   const preview = [
     `${pack.pluginName}/`,
     '  .codex-plugin/plugin.json',
+    '  marketplace-entry.json',
     ...pack.selectedDrafts.map((draft) => `  skills/${draft.skillName}/SKILL.md`),
     '',
     '.codex-plugin/plugin.json',
     JSON.stringify(pack.manifest, null, 2),
+    '',
+    'marketplace-entry.json',
+    JSON.stringify(pack.marketplace, null, 2),
     '',
     'Included skills',
     ...pack.selectedDrafts.map((draft) => `- ${draft.displayName}: ${draft.path}`),

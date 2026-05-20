@@ -28,12 +28,19 @@ const run = await post('/api/commands/run', {
 if (!run.ok) throw new Error(run.error || 'cron.add dry-run failed')
 if (!run.dryRun) throw new Error('command smoke should always dry-run')
 
-for (const commandId of ['gateway.restart', 'security.audit.deep']) {
+const warningFixIds = ['gateway.restart', 'security.audit.deep', 'model.main.set', 'plugin.discord.install']
+
+for (const commandId of warningFixIds) {
   const warningFix = await post('/api/commands/run', {
     commandId,
     confirm: 'RUN',
     dryRun: true,
-    params: {},
+    params:
+      commandId === 'model.main.set'
+        ? { model: 'openai/gpt-5.4' }
+        : commandId === 'plugin.discord.install'
+          ? { pluginPackage: '@openclaw/discord' }
+          : {},
   })
   if (!warningFix.ok) throw new Error(warningFix.error || `${commandId} dry-run failed`)
   if (!warningFix.dryRun) throw new Error(`${commandId} smoke should always dry-run`)
@@ -45,7 +52,7 @@ console.log(
       ok: true,
       preview: preview.preview,
       dryRun: Boolean(run.dryRun),
-      warningFixes: ['gateway.restart', 'security.audit.deep'],
+      warningFixes: warningFixIds,
     },
     null,
     2,

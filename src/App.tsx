@@ -44,12 +44,19 @@ type ReviewDraft = {
   summary: string
   command: string
   artifactLabel?: string
-  kind?: 'command' | 'skill' | 'plugin'
+  kind?: 'command' | 'skill' | 'plugin' | 'skill-install'
   nextStep: string
-  commandId?: 'agent.add' | 'cron.add' | 'gateway.restart' | 'security.audit.deep'
+  commandId?:
+    | 'agent.add'
+    | 'cron.add'
+    | 'gateway.restart'
+    | 'security.audit.deep'
+    | 'model.main.set'
+    | 'plugin.discord.install'
   params?: Record<string, string>
   skillParams?: SkillDraftInput
   pluginParams?: PluginPackInput
+  skillInstallName?: string
   status?: 'draft' | 'ready' | 'running' | 'succeeded' | 'failed'
   resultMessage?: string
 }
@@ -512,9 +519,10 @@ function warningGuide(check: DoctorCheck) {
   }
 }
 
-function warningRecipe(check: DoctorCheck): Pick<ReviewDraft, 'commandId' | 'params' | 'nextStep'> | null {
+function warningRecipe(check: DoctorCheck): Pick<ReviewDraft, 'command' | 'commandId' | 'params' | 'nextStep'> | null {
   if (check.id === 'gateway' || check.id === 'service' || check.command === 'openclaw gateway restart') {
     return {
+      command: 'openclaw gateway restart',
       commandId: 'gateway.restart',
       params: {},
       nextStep: 'Restart only after confirming OpenClaw is the local instance you want Cockpit to repair.',
@@ -522,9 +530,26 @@ function warningRecipe(check: DoctorCheck): Pick<ReviewDraft, 'commandId' | 'par
   }
   if (check.id === 'security-posture' || check.command === 'openclaw security audit --deep') {
     return {
+      command: 'openclaw security audit --deep',
       commandId: 'security.audit.deep',
       params: {},
       nextStep: 'Run the audit, then use the result as the current source truth before changing settings.',
+    }
+  }
+  if (check.id === 'main-model') {
+    return {
+      command: 'openclaw config set agents.list[0].model \'{"primary":"openai/gpt-5.4"}\' --strict-json',
+      commandId: 'model.main.set',
+      params: { model: 'openai/gpt-5.4' },
+      nextStep: 'Use this only when you want the main helper model changed to the reviewed default.',
+    }
+  }
+  if (check.id === 'discord') {
+    return {
+      command: 'openclaw plugins install @openclaw/discord',
+      commandId: 'plugin.discord.install',
+      params: { pluginPackage: '@openclaw/discord' },
+      nextStep: 'Install only if you actually want Discord support enabled for this OpenClaw instance.',
     }
   }
   return null
@@ -733,6 +758,33 @@ function App() {
         return
       }
 
+      if (reviewDraft.kind === 'skill-install') {
+        const response = await fetch('/api/skills/drafts/install', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            confirm: 'INSTALL',
+            skillName: reviewDraft.skillInstallName,
+          }),
+        })
+        const result = (await response.json()) as SkillInstallResult
+        if (!response.ok || !result.ok) throw new Error(result.error || `Skill install returned HTTP ${response.status}`)
+        setSavedDrafts((current) => [
+          {
+            ...reviewDraft,
+            id: `${reviewDraft.title}-${Date.now()}`,
+            savedAt: result.installedAt ? new Date(result.installedAt).toLocaleTimeString() : 'just now',
+            status: 'ready',
+            resultMessage: result.path,
+          },
+          ...current,
+        ])
+        setReviewNotice(result.alreadyInstalled ? `Skill already installed: ${result.path}` : `Installed skill: ${result.path}`)
+        setReviewDraft(null)
+        await refresh()
+        return
+      }
+
       setSavedDrafts((current) => [
         {
           ...reviewDraft,
@@ -812,21 +864,18 @@ function App() {
     }
   }
 
-  const installSkill = async (skillName: string) => {
+  const installSkill = (skillName: string) => {
     setReviewNotice('')
-    try {
-      const response = await fetch('/api/skills/drafts/install', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ skillName, confirm: 'INSTALL' }),
-      })
-      const result = (await response.json()) as SkillInstallResult
-      if (!response.ok || !result.ok) throw new Error(result.error || `Skill install returned HTTP ${response.status}`)
-      setReviewNotice(result.alreadyInstalled ? `Skill already installed: ${result.path}` : `Installed skill: ${result.path}`)
-      await refresh()
-    } catch (error) {
-      setReviewNotice(error instanceof Error ? error.message : 'Could not install the saved skill draft.')
-    }
+    const draft = skillWorkshop.drafts.find((item) => item.skillName === skillName)
+    openReview({
+      title: `Install ${draft?.displayName ?? skillName}`,
+      summary: `Copies the saved ${draft?.displayName ?? skillName} draft into the configured skills folder. It refuses to overwrite a different existing SKILL.md file.`,
+      command: `copy ${draft?.path ?? `${skillName}/SKILL.md`} -> ~/.codex/skills/${skillName}/SKILL.md`,
+      artifactLabel: 'Install preview',
+      kind: 'skill-install',
+      skillInstallName: skillName,
+      nextStep: 'Install only after you recognize the saved draft and the target skill folder.',
+    })
   }
 
   const draftPluginPack = async (skillNames: string[]) => {
@@ -2007,7 +2056,7 @@ function WarningCheckRow({
 }) {
   const guide = warningGuide(check)
   const recipe = warningRecipe(check)
-  const command = recipe?.commandId === 'gateway.restart' ? 'openclaw gateway restart' : recipe?.commandId === 'security.audit.deep' ? 'openclaw security audit --deep' : check.command
+  const command = recipe?.command ?? check.command
 
   return (
     <div className="check-row">
@@ -2038,7 +2087,7 @@ function WarningCheckRow({
               onReviewCommand({
                 title: check.title,
                 summary: check.detail,
-                command,
+                command: recipe.command,
                 commandId: recipe.commandId,
                 params: recipe.params,
                 nextStep: recipe.nextStep,
@@ -2089,6 +2138,7 @@ function ReviewDrawer({
   onRun: () => void
 }) {
   const canRun = Boolean(draft.commandId)
+  const isFileWrite = draft.kind === 'skill' || draft.kind === 'plugin' || draft.kind === 'skill-install'
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose()
@@ -2123,14 +2173,22 @@ function ReviewDrawer({
         <div className="review-checks" aria-label="Safety checks">
           <div>
             <CheckCircle2 size={16} />
-            <span>{canRun ? 'This command uses a server-side allowlisted template.' : 'This preview is not runnable yet.'}</span>
+            <span>
+              {canRun
+                ? 'This command uses a server-side allowlisted template.'
+                : isFileWrite
+                  ? 'This file change uses a server-side reviewed write path.'
+                  : 'This preview is not runnable yet.'}
+            </span>
           </div>
           <div>
             <CheckCircle2 size={16} />
             <span>
               {canRun
                 ? 'The browser sends a command ID and validated fields, not raw shell text.'
-                : 'This is a draft preview only; install and run steps come later.'}
+                : isFileWrite
+                  ? 'The browser sends validated names and confirmation, not raw file paths.'
+                  : 'This is a draft preview only; install and run steps come later.'}
             </span>
           </div>
           <div>
@@ -2157,7 +2215,9 @@ function ReviewDrawer({
                 ? 'Save skill draft'
                 : draft.kind === 'plugin'
                   ? 'Save plugin pack'
-                  : 'Save reviewed draft'}
+                  : draft.kind === 'skill-install'
+                    ? 'Install saved skill'
+                    : 'Save reviewed draft'}
           </button>
           <button type="button" className="run-action" onClick={onRun} disabled={!canRun || isRunning}>
             <Play size={15} />
