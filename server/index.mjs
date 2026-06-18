@@ -1,7 +1,10 @@
 import { createServer } from 'node:http'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import { commandCatalog, buildCommandDraft, readAuditLog, runCatalogCommand } from './commandCatalog.mjs'
 import { buildOverview } from './overviewNormalizer.mjs'
 import { defaultOpenClawPaths, readOpenClawSources } from './openclawSources.mjs'
+import { redactForClient } from './redaction.mjs'
 import {
   buildPluginPackDraft,
   buildSkillDraft,
@@ -14,6 +17,7 @@ import { buildWorkspaceSuggestions } from './workspaces.mjs'
 
 const port = Number.parseInt(process.env.COCKPIT_API_PORT ?? '4314', 10)
 const paths = defaultOpenClawPaths(process.env)
+const execFileAsync = promisify(execFile)
 
 createServer(async (request, response) => {
   const url = new URL(request.url ?? '/', `http://${request.headers.host ?? '127.0.0.1'}`)
@@ -113,6 +117,17 @@ createServer(async (request, response) => {
     return
   }
 
+  if (url.pathname === '/api/openclaw/dashboard' && request.method === 'POST') {
+    try {
+      assertLocalRequest(request)
+      const result = await openOpenClawDashboard(process.env)
+      sendJson(response, result.ok ? 200 : 400, result)
+    } catch (error) {
+      sendJson(response, 400, { ok: false, error: error instanceof Error ? error.message : String(error) })
+    }
+    return
+  }
+
   if (url.pathname === '/api/commands/preview' && request.method === 'POST') {
     try {
       assertLocalRequest(request)
@@ -186,4 +201,27 @@ function assertLocalRequest(request) {
   const hostOk = host.startsWith('127.0.0.1:') || host.startsWith('localhost:')
   const originOk = !origin || origin.startsWith('http://127.0.0.1:') || origin.startsWith('http://localhost:')
   if (!hostOk || !originOk) throw new Error('Command requests must come from the local cockpit.')
+}
+
+async function openOpenClawDashboard(env) {
+  try {
+    const { stdout, stderr } = await execFileAsync('openclaw', ['dashboard', '--yes'], {
+      timeout: 15_000,
+      maxBuffer: 1024 * 1024,
+      env,
+    })
+    return {
+      ok: true,
+      stdout: redactForClient(stdout),
+      stderr: redactForClient(stderr),
+      openedAt: new Date().toISOString(),
+    }
+  } catch (error) {
+    return {
+      ok: false,
+      stdout: redactForClient(error?.stdout ?? ''),
+      stderr: redactForClient(error?.stderr ?? ''),
+      error: redactForClient(error instanceof Error ? error.message : String(error)),
+    }
+  }
 }

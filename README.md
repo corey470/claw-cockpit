@@ -36,7 +36,7 @@ Make OpenClaw easier to operate without hiding the real system:
 
 The sidebar is task-first:
 
-- `Open OpenClaw Chat` for normal agent conversations
+- `Open OpenClaw Chat` for normal agent conversations through OpenClaw's token-aware local dashboard opener
 - `Check OpenClaw` for status and next move
 - `Plan a change` for reviewed setup drafts
 - `Fix warnings` for setup diagnosis
@@ -62,7 +62,7 @@ For now, replies are local guide rails only. They do not call a helper or change
 
 1. Start OpenClaw normally.
 2. Run Claw Cockpit with `npm run dev`.
-3. Use `Open OpenClaw Chat` for normal agent conversations.
+3. Use `Open OpenClaw Chat` for normal agent conversations. Cockpit asks the local adapter to run `openclaw dashboard --yes`, so the browser opens with the current local token instead of a stale unauthenticated link.
 4. Use `Plan a change` when you want a setup command drafted in plain English.
 5. Use `Fix warnings` when OpenClaw reports something confusing.
 6. Use `Create helper` or `Add reminder` to draft setup work before anything runs.

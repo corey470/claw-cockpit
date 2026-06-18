@@ -75,7 +75,15 @@
   align-items: center;
   background: #eff6ff;
   color: var(--blue);
+  cursor: pointer;
+  font: inherit;
   text-decoration: none;
+  text-align: left;
+}
+
+.openclaw-chat-link:disabled {
+  cursor: wait;
+  opacity: 0.78;
 }
 
 .openclaw-chat-link strong,
@@ -114,6 +122,7 @@ nav {
 
 .nav-item,
 .icon-button,
+.openclaw-chat-link,
 .template,
 .job-option,
 .workspace-picker button,
@@ -673,7 +682,7 @@ h2 {
   line-height: 1.45;
 }
 
-.role-banner a {
+.role-banner button {
   min-height: 38px;
   border: 1px solid #fed7aa;
   border-radius: 8px;
@@ -684,9 +693,16 @@ h2 {
   flex: 0 0 auto;
   background: #ffffff;
   color: #7c2d12;
+  cursor: pointer;
+  font: inherit;
   font-size: 13px;
   font-weight: 760;
   text-decoration: none;
+}
+
+.role-banner button:disabled {
+  cursor: wait;
+  opacity: 0.74;
 }
 
 .handled-strip {
@@ -1760,7 +1776,7 @@ code {
     padding: 12px;
   }
 
-  .role-banner a {
+  .role-banner button {
     width: 100%;
     justify-content: center;
   }

@@ -76,6 +76,14 @@ type CommandRunResult = {
   finishedAt?: string
 }
 
+type OpenClawLaunchResult = {
+  ok: boolean
+  stdout?: string
+  stderr?: string
+  error?: string
+  openedAt?: string
+}
+
 type SkillSaveResult = {
   ok: boolean
   savedAt?: string
@@ -575,6 +583,7 @@ function App() {
   const [reviewNotice, setReviewNotice] = useState('')
   const [runResult, setRunResult] = useState<CommandRunResult | null>(null)
   const [isRunningDraft, setIsRunningDraft] = useState(false)
+  const [isOpeningOpenClaw, setIsOpeningOpenClaw] = useState(false)
 
   const refresh = async () => {
     setIsLoading(true)
@@ -698,6 +707,21 @@ function App() {
     setReviewNotice('')
     setRunResult(null)
     setReviewDraft(draft)
+  }
+
+  const openOpenClawDashboard = async () => {
+    setIsOpeningOpenClaw(true)
+    setReviewNotice('')
+    try {
+      const response = await fetch('/api/openclaw/dashboard', { method: 'POST' })
+      const result = (await response.json()) as OpenClawLaunchResult
+      if (!response.ok || !result.ok) throw new Error(result.error || `OpenClaw launcher returned HTTP ${response.status}`)
+      setReviewNotice('Opened OpenClaw with the current local token.')
+    } catch (error) {
+      setReviewNotice(error instanceof Error ? error.message : 'Could not open OpenClaw from the local adapter.')
+    } finally {
+      setIsOpeningOpenClaw(false)
+    }
   }
 
   const markReviewReady = async () => {
@@ -921,14 +945,14 @@ function App() {
           </div>
         </div>
 
-        <a className="openclaw-chat-link" href="http://127.0.0.1:18789/chat?session=main" target="_blank" rel="noreferrer">
+        <button className="openclaw-chat-link" type="button" onClick={openOpenClawDashboard} disabled={isOpeningOpenClaw}>
           <MessageSquareText size={17} />
           <span>
-            <strong>Open OpenClaw Chat</strong>
-            <small>Use this for normal agent conversations</small>
+            <strong>{isOpeningOpenClaw ? 'Opening OpenClaw...' : 'Open OpenClaw Chat'}</strong>
+            <small>Launches with your local token</small>
           </span>
           <ExternalLink size={15} />
-        </a>
+        </button>
 
         <div className="sidebar-section-title">Cockpit tasks</div>
 
@@ -991,9 +1015,11 @@ function App() {
             savedDrafts={savedDrafts}
             onDraftChange={setDraftMessage}
             onNavigate={setActiveSection}
+            onOpenOpenClaw={openOpenClawDashboard}
             onReviewCommand={openReview}
             onSend={sendDraftMessage}
             onStarter={addStarterPrompt}
+            isOpeningOpenClaw={isOpeningOpenClaw}
           />
         ) : (
           <DashboardPage
@@ -1040,9 +1066,11 @@ function ChatPage({
   savedDrafts,
   onDraftChange,
   onNavigate,
+  onOpenOpenClaw,
   onReviewCommand,
   onSend,
   onStarter,
+  isOpeningOpenClaw,
 }: {
   draftMessage: string
   messages: ChatMessage[]
@@ -1050,9 +1078,11 @@ function ChatPage({
   savedDrafts: SavedDraft[]
   onDraftChange: (value: string) => void
   onNavigate: (section: SectionId) => void
+  onOpenOpenClaw: () => void
   onReviewCommand: (draft: ReviewDraft) => void
   onSend: () => void
   onStarter: (starter: (typeof starterPrompts)[number]) => void
+  isOpeningOpenClaw: boolean
 }) {
   return (
     <section className="chat-layout" aria-label="Beginner OpenClaw chat">
@@ -1065,10 +1095,10 @@ function ChatPage({
               to check health, understand warnings, or draft setup changes safely.
             </p>
           </div>
-          <a href="http://127.0.0.1:18789/chat?session=main" target="_blank" rel="noreferrer">
+          <button type="button" onClick={onOpenOpenClaw} disabled={isOpeningOpenClaw}>
             <ExternalLink size={16} />
-            Open OpenClaw Chat
-          </a>
+            {isOpeningOpenClaw ? 'Opening...' : 'Open OpenClaw Chat'}
+          </button>
         </div>
 
         <ProofStrip overview={overview} />
