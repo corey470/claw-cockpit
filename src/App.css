@@ -1747,6 +1747,62 @@ code {
   opacity: 0.7;
 }
 
+.repair-result {
+  margin-top: 12px;
+  border: 1px solid #dbe6f3;
+  border-radius: 8px;
+  padding: 11px;
+  background: #fbfdff;
+}
+
+.repair-result.success {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.repair-result.failed {
+  border-color: #fecaca;
+  background: #fff1f2;
+}
+
+.repair-result strong {
+  display: block;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.repair-result p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.repair-proof {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.repair-proof div {
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 8px;
+  padding: 9px;
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.repair-proof span,
+.repair-proof small {
+  display: block;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.repair-proof strong {
+  margin-top: 3px;
+}
+
 .plain-steps {
   display: grid;
   gap: 10px;
@@ -1931,6 +1987,10 @@ code {
   .contract-row > .check-dot,
   .contract-row > div:last-child {
     grid-column: auto;
+  }
+
+  .repair-proof {
+    grid-template-columns: 1fr;
   }
 
   .role-banner button {

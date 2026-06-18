@@ -31,6 +31,7 @@ Make OpenClaw easier to operate without hiding the real system:
 - run compatibility contract checks after OpenClaw changes
 - record redacted fixtures when OpenClaw output drifts
 - translate common drift into repair recipes
+- run reviewed repair loops that execute an allowlisted fix, re-check OpenClaw, and show before/after proof
 - show history, compatibility, and safety signals
 - keep the adapter open enough for contributors to extend
 
@@ -119,6 +120,7 @@ It can:
 - inspect configured upstream, fork, and local OpenClaw repos
 - run a compatibility contract against the current CLI/status/config shape
 - show repair recipes for known drift patterns
+- run allowlisted repair loops from those recipes, then re-read OpenClaw and report what changed
 - record redacted fixtures under `~/.openclaw/claw-cockpit/recorded-fixtures/`
 
 Repo inspection is opt-in through environment variables:
@@ -165,6 +167,7 @@ The default posture is review-first:
 - `/api/overview` reads OpenClaw status, gateway probe output, `openclaw.json`, and cron jobs.
 - `/api/compatibility-report` returns update radar, contract checks, compatibility scoring, and repair recipes.
 - `/api/fixtures/record` records redacted current OpenClaw output only after explicit local confirmation.
+- `/api/repairs/run` accepts only runnable repair recipe IDs, requires explicit confirmation, executes allowlisted actions, and returns before/after compatibility proof.
 - setup cards show command previews first.
 - `/api/commands/run` accepts only server-side command IDs, validated fields, and explicit confirmation.
 - `/api/skills/draft` returns draft file content only; it does not write or install skills.
@@ -225,13 +228,14 @@ Claw Cockpit is now ready for real local work as a review-first OpenClaw cockpit
 - compatibility contract checks protect the adapter from CLI/status/config drift
 - redacted fixture recording captures new OpenClaw output before parser changes
 - repair recipes translate update drift into safe reviewed next steps
+- repair loops can run an allowlisted recipe, re-check OpenClaw, and show before/after proof
 - gateway restart, deep security audit, main model repair, and Discord plugin install warning fixes are runnable through reviewed command IDs
 - helper setup can start from real workspace suggestions instead of manual path guessing
 - command runs are audit-logged under the local OpenClaw home
 - GitHub Actions validates the app with fixtures
 - live local smoke checks validate your machine path
 
-The remaining gap before calling it fully complete is broad command coverage: more config edits, more plugin actions, and more OpenClaw maintenance actions need their own allowlisted templates before they become runnable.
+The remaining gap before calling it fully complete is broad command coverage: more config edits, more plugin actions, and more OpenClaw maintenance actions need their own allowlisted templates and repair-loop smoke coverage before they become runnable.
 
 ## Irie Product Philosophy
 

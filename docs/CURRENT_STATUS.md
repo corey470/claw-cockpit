@@ -26,6 +26,7 @@ It is not a replacement for OpenClaw Chat. It is the safer control layer for che
 - Adds a compatibility contract report for CLI/status/config/gateway drift.
 - Adds redacted fixture recording under the local OpenClaw home.
 - Adds repair recipes for update drift, blocked contracts, gateway trouble, security audit drift, CLI remapping, parser shape drift, and plugin pinning.
+- Adds full repair loops for runnable recipes: detect the issue, execute the allowlisted action, re-read OpenClaw, and return before/after proof.
 - Includes README demo media and GitHub issue/PR templates.
 - Validates with local lint/build/smoke checks and GitHub Actions fixture smoke.
 
@@ -37,6 +38,7 @@ It is not a replacement for OpenClaw Chat. It is the safer control layer for che
 - Plugin pack writing starts from a reviewed preview and refuses conflicting manifest or skill files.
 - Repo/fork checks are read-only.
 - Fixture recording requires explicit local confirmation and writes redacted output outside the repo by default.
+- Repair loops require explicit local confirmation, accept only runnable recipe IDs, and can only call the allowlisted command catalog or fixture recorder.
 - Raw OpenClaw output stays out of the browser unless local debug mode is explicitly enabled and redaction runs first.
 
 ## Still To Address
@@ -48,6 +50,7 @@ These are not launch blockers, but they are the right next improvements:
 - Review recorded live fixtures and promote useful ones into committed parser fixtures.
 - Add a reviewed update workflow after repo/fork source settings are proven on more machines.
 - Add more warning recipes beyond the four current allowlisted fixes.
+- Promote more repair recipes from preview-only to full repair loops after each one has validation and dry-run smoke coverage.
 - Improve saved-skill install review copy with a side-by-side file preview.
 - Add real-user mobile QA once more people try the cockpit.
 

@@ -132,6 +132,44 @@ type FixtureRecordResult = {
   error?: string
 }
 
+type RepairLoopSummary = {
+  contract: HealthState
+  compatibility: HealthState
+  update: HealthState
+  recipes: {
+    id: string
+    title: string
+    state: HealthState
+    runnable: boolean
+  }[]
+  nextBestMove: {
+    state: HealthState
+    title: string
+    detail: string
+  }
+}
+
+type RepairLoopResult = {
+  ok: boolean
+  recipeId?: string
+  title?: string
+  dryRun?: boolean
+  action?: {
+    ok?: boolean
+    stdout?: string
+    stderr?: string
+    error?: string
+    path?: string
+    preview?: string
+  }
+  before?: RepairLoopSummary
+  after?: RepairLoopSummary
+  cleared?: boolean
+  message?: string
+  error?: string
+  finishedAt?: string
+}
+
 type AgentSummary = {
   id: string
   name: string
@@ -738,6 +776,8 @@ function App() {
   const [isRunningDraft, setIsRunningDraft] = useState(false)
   const [isOpeningOpenClaw, setIsOpeningOpenClaw] = useState(false)
   const [isRecordingFixture, setIsRecordingFixture] = useState(false)
+  const [runningRepairId, setRunningRepairId] = useState('')
+  const [repairLoopResult, setRepairLoopResult] = useState<RepairLoopResult | null>(null)
 
   const refresh = async () => {
     setIsLoading(true)
@@ -901,6 +941,33 @@ function App() {
       setReviewNotice(error instanceof Error ? error.message : 'Could not record the OpenClaw fixture.')
     } finally {
       setIsRecordingFixture(false)
+    }
+  }
+
+  const runRepairLoop = async (recipe: RepairRecipe) => {
+    setRunningRepairId(recipe.id)
+    setRepairLoopResult(null)
+    setReviewNotice('')
+    try {
+      const response = await fetch('/api/repairs/run', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          recipeId: recipe.id,
+          confirm: 'REPAIR',
+        }),
+      })
+      const result = (await response.json()) as RepairLoopResult
+      setRepairLoopResult(result)
+      if (!response.ok || !result.ok) throw new Error(result.error || `Repair loop returned HTTP ${response.status}`)
+      setReviewNotice(result.cleared ? `Repair cleared: ${recipe.title}` : `Repair ran, but still needs review: ${recipe.title}`)
+      await refresh()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not run the repair loop.'
+      setRepairLoopResult({ ok: false, recipeId: recipe.id, title: recipe.title, error: message })
+      setReviewNotice(message)
+    } finally {
+      setRunningRepairId('')
     }
   }
 
@@ -1210,6 +1277,7 @@ function App() {
             priorityChecks={priorityChecks}
             onNavigate={setActiveSection}
             onRecordFixture={recordFixture}
+            onRunRepairLoop={runRepairLoop}
             savedDrafts={savedDrafts}
             skillWorkshop={skillWorkshop}
             workspaceSuggestions={workspaceSuggestions}
@@ -1217,6 +1285,8 @@ function App() {
             onInstallSkill={installSkill}
             onDraftPluginPack={draftPluginPack}
             isRecordingFixture={isRecordingFixture}
+            runningRepairId={runningRepairId}
+            repairLoopResult={repairLoopResult}
           />
         )}
 
@@ -1412,6 +1482,7 @@ function DashboardPage({
   priorityChecks,
   onNavigate,
   onRecordFixture,
+  onRunRepairLoop,
   savedDrafts,
   skillWorkshop,
   workspaceSuggestions,
@@ -1419,6 +1490,8 @@ function DashboardPage({
   onInstallSkill,
   onDraftPluginPack,
   isRecordingFixture,
+  runningRepairId,
+  repairLoopResult,
 }: {
   activeSection: SectionId
   compatibilityReport: CompatibilityReport
@@ -1427,6 +1500,7 @@ function DashboardPage({
   priorityChecks: DoctorCheck[]
   onNavigate: (section: SectionId) => void
   onRecordFixture: () => void
+  onRunRepairLoop: (recipe: RepairRecipe) => void
   savedDrafts: SavedDraft[]
   skillWorkshop: SkillWorkshop
   workspaceSuggestions: WorkspaceSuggestion[]
@@ -1434,6 +1508,8 @@ function DashboardPage({
   onInstallSkill: (skillName: string) => void
   onDraftPluginPack: (skillNames: string[]) => void
   isRecordingFixture: boolean
+  runningRepairId: string
+  repairLoopResult: RepairLoopResult | null
 }) {
   const [selectedProject, setSelectedProject] = useState(projectTemplates[0])
   const [selectedJob, setSelectedJob] = useState(jobTemplates[0])
@@ -2046,6 +2122,12 @@ function DashboardPage({
                       </div>
                       <p>{recipe.trigger}</p>
                       <small>{recipe.safeAction}</small>
+                      {recipe.runnable && (
+                        <button type="button" onClick={() => onRunRepairLoop(recipe)} disabled={runningRepairId === recipe.id}>
+                          <Wrench size={15} />
+                          {runningRepairId === recipe.id ? 'Running loop' : 'Run repair loop'}
+                        </button>
+                      )}
                       {draft ? (
                         <button type="button" onClick={() => onReviewCommand(draft)}>
                           <ClipboardList size={15} />
@@ -2062,6 +2144,26 @@ function DashboardPage({
                 })
               )}
             </div>
+            {repairLoopResult && (
+              <div className={repairLoopResult.ok ? 'repair-result success' : 'repair-result failed'} role="status">
+                <strong>{repairLoopResult.ok ? repairLoopResult.title || 'Repair loop finished' : 'Repair loop failed'}</strong>
+                <p>{repairLoopResult.message || repairLoopResult.error || 'No repair result message was returned.'}</p>
+                {repairLoopResult.before && repairLoopResult.after && (
+                  <div className="repair-proof">
+                    <div>
+                      <span>Before</span>
+                      <strong>{stateLabel(repairLoopResult.before.contract)}</strong>
+                      <small>{repairLoopResult.before.nextBestMove.title}</small>
+                    </div>
+                    <div>
+                      <span>After</span>
+                      <strong>{stateLabel(repairLoopResult.after.contract)}</strong>
+                      <small>{repairLoopResult.after.nextBestMove.title}</small>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </article>
         </section>
       </>

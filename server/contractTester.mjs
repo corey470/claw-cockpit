@@ -14,12 +14,14 @@ export function buildContractReport({ sources, paths, statusText, probeText }) {
   const config = sources.configRead.value
   const jobs = sources.jobsRead.value
   const requiredCommands = ['status', 'doctor', 'gateway', 'agents', 'cron', 'plugins', 'security', 'models']
-  const missingCommands = requiredCommands.filter((command) => !new RegExp(`\\b${command}\\b`).test(cliHelpText))
+  const missingCommands = requiredCommands.filter((command) => !commandAvailable({ command, cliHelpText, sources }))
   const statusShapeSignals = ['Overview', 'Gateway', 'Gateway service', 'Security audit', 'Sessions']
   const missingStatusSignals = statusShapeSignals.filter((signal) => !statusText.includes(signal))
   const agentList = Array.isArray(config?.agents?.list) ? config.agents.list : []
   const jobsList = Array.isArray(jobs) ? jobs : Array.isArray(jobs?.jobs) ? jobs.jobs : []
   const security = parseSecuritySummary(statusText)
+  const gatewayStatus = parseTableValue(statusText, 'Gateway')
+  const gatewayReachable = probeText.includes('Reachable: yes') || /\b(local|reachable)\b/i.test(gatewayStatus)
 
   const checks = sortChecksByRisk([
     contractCheck({
@@ -57,14 +59,20 @@ export function buildContractReport({ sources, paths, statusText, probeText }) {
     }),
     contractCheck({
       id: 'gateway-probe',
-      title: probeText.includes('Reachable: yes') ? 'Gateway probe still works' : 'Gateway probe contract changed',
+      title: probeText.includes('Reachable: yes')
+        ? 'Gateway probe still works'
+        : gatewayReachable
+          ? 'Gateway reachable through status fallback'
+          : 'Gateway probe contract changed',
       detail: probeText.includes('Reachable: yes')
         ? 'The local gateway probe returns the expected reachable signal.'
-        : sources.probe.error || 'The probe did not return Reachable: yes.',
-      state: probeText.includes('Reachable: yes') ? 'healthy' : 'blocked',
+        : gatewayReachable
+          ? 'The gateway probe changed or returned warnings, but status still reports the local gateway as reachable.'
+          : sources.probe.error || 'The probe did not return Reachable: yes.',
+      state: probeText.includes('Reachable: yes') ? 'healthy' : gatewayReachable ? 'attention' : 'blocked',
       source: 'openclaw gateway probe',
       expected: 'Reachable: yes',
-      observed: probeText.slice(0, 160) || sources.probe.error,
+      observed: gatewayReachable ? 'status fallback: Gateway local' : probeText.slice(0, 160) || sources.probe.error,
     }),
     contractCheck({
       id: 'setup-command-surface',
@@ -92,11 +100,11 @@ export function buildContractReport({ sources, paths, statusText, probeText }) {
     }),
     contractCheck({
       id: 'cron-registry',
-      title: sources.jobsRead.ok ? 'Cron registry is readable' : 'Cron registry is optional or moved',
+      title: sources.jobsRead.ok ? 'Cron registry is readable' : 'Cron registry is optional until jobs exist',
       detail: sources.jobsRead.ok
         ? `${jobsList.length} scheduled jobs were read.`
-        : 'No cron registry was found. That is okay only if this OpenClaw instance has no scheduled work.',
-      state: sources.jobsRead.ok ? 'healthy' : 'unknown',
+        : 'No cron registry was found. That is okay when this OpenClaw instance has no scheduled work yet.',
+      state: 'healthy',
       source: paths.cronJobsPath,
       expected: 'cron/jobs.json or no jobs configured',
       observed: sources.jobsRead.ok ? `${jobsList.length} jobs` : sources.jobsRead.error,
@@ -143,4 +151,9 @@ function contractCheck(check) {
     ...check,
     kind: 'contract',
   }
+}
+
+function commandAvailable({ command, cliHelpText, sources }) {
+  if (new RegExp(`\\b${command}\\b`).test(cliHelpText)) return true
+  return Boolean(sources.commandHelp?.[command]?.ok)
 }

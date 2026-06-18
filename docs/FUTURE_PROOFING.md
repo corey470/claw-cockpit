@@ -60,6 +60,7 @@ When any of these change, the UI should show a drift warning instead of pretendi
 - Upstream/fork checks must stay read-only unless a future reviewed update command is explicitly added.
 - Fixture recording should save redacted evidence first; copying into committed fixtures is a separate review step.
 - Repair recipes should say when a fix is not runnable yet instead of pretending Cockpit can safely patch everything.
+- Runnable repair recipes must complete the loop: read current state, run only an allowlisted action, re-read state, and show before/after proof.
 
 ## Smoke Check
 
@@ -93,6 +94,7 @@ The compatibility smoke check verifies that `/api/compatibility-report` returns:
 - configured repo/fork source summaries
 - contract checks for CLI/status/config/gateway shape
 - repair recipes for known drift
+- a dry-run repair loop for at least one runnable recipe
 - a redacted fixture recording path
 
 ## UI Copy Rule

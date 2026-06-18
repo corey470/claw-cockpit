@@ -6,6 +6,7 @@ import { commandCatalog, buildCommandDraft, readAuditLog, runCatalogCommand } fr
 import { buildOverview } from './overviewNormalizer.mjs'
 import { defaultOpenClawPaths, readOpenClawSources } from './openclawSources.mjs'
 import { recordFixture } from './fixtureRecorder.mjs'
+import { runRepairLoop } from './repairRunner.mjs'
 import { redactForClient } from './redaction.mjs'
 import {
   buildPluginPackDraft,
@@ -148,6 +149,25 @@ createServer(async (request, response) => {
         paths,
       })
       sendJson(response, 200, await recordFixture({ sources, paths, confirm: body.confirm, env: process.env }))
+    } catch (error) {
+      sendJson(response, 400, { ok: false, error: error instanceof Error ? error.message : String(error) })
+    }
+    return
+  }
+
+  if (url.pathname === '/api/repairs/run' && request.method === 'POST') {
+    try {
+      assertLocalRequest(request)
+      const body = await readJsonBody(request)
+      const result = await runRepairLoop({
+        recipeId: body.recipeId,
+        confirm: body.confirm,
+        dryRun: Boolean(body.dryRun),
+        paths,
+        env: process.env,
+        fixtureDir: process.env.COCKPIT_FIXTURE_DIR,
+      })
+      sendJson(response, result.ok ? 200 : 400, result)
     } catch (error) {
       sendJson(response, 400, { ok: false, error: error instanceof Error ? error.message : String(error) })
     }

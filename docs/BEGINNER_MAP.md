@@ -33,6 +33,7 @@ Paths:
 - `server/updateRadar.mjs`
 - `server/fixtureRecorder.mjs`
 - `server/repairRecipes.mjs`
+- `server/repairRunner.mjs`
 - `server/overviewNormalizer.mjs`
 - `server/commandCatalog.mjs`
 - `server/skillWorkshop.mjs`
@@ -41,6 +42,8 @@ Paths:
 This is the translator between OpenClaw and the UI. It reads the OpenClaw CLI, gateway, config, reminder files, update signals, and configured repo/fork sources, then sends the browser a safer summary.
 
 It also reads local skill folders, creates skill drafts, saves reviewed drafts under the Cockpit draft folder, installs saved drafts through a narrow server path, writes reviewed plugin packs, and suggests local project folders for helper setup.
+
+When a detected issue has a safe recipe, `repairRunner` runs the allowlisted action and checks OpenClaw again so the UI can show before/after proof.
 
 When OpenClaw changes, fix the adapter first.
 
@@ -91,3 +94,4 @@ Good next steps are small and concrete:
 - add a full marketplace writer for a chosen `.agents/plugins/marketplace.json`
 - move one adapter responsibility into a smaller file
 - add one more allowlisted warning fix with validation and dry-run coverage
+- turn one preview-only repair recipe into a full repair loop with before/after proof

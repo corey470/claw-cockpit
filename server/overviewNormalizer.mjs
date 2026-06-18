@@ -4,6 +4,7 @@ import {
   countActiveSessions,
   countConfiguredAgents,
   extractLine,
+  parseTableValue,
   parseVersion,
   summarizeAgents,
   summarizeJobs,
@@ -30,6 +31,8 @@ export function buildOverview({ sources, paths, env }) {
   const agentTotal = countConfiguredAgents(config, statusText)
   const sessionTotal = countActiveSessions(statusText, sessions.length)
   const debugRawStatus = env.COCKPIT_DEBUG_RAW_STATUS === '1'
+  const gatewayStatus = parseTableValue(statusText, 'Gateway')
+  const gatewayReachable = probeText.includes('Reachable: yes') || /\b(local|reachable)\b/i.test(gatewayStatus)
 
   return {
     adapter: {
@@ -39,10 +42,8 @@ export function buildOverview({ sources, paths, env }) {
     },
     generatedAt: new Date().toISOString(),
     gateway: {
-      state: probeText.includes('Reachable: yes') || statusText.includes('Gateway              │ local')
-        ? 'healthy'
-        : 'blocked',
-      label: probeText.includes('Reachable: yes') ? 'OpenClaw is reachable' : 'Gateway needs help',
+      state: gatewayReachable ? 'healthy' : 'blocked',
+      label: gatewayReachable ? 'OpenClaw is reachable' : 'Gateway needs help',
       detail: extractLine(probeText, 'Local loopback') || extractLine(statusText, 'Gateway') || 'No gateway signal yet.',
       url: 'ws://127.0.0.1:18789',
     },

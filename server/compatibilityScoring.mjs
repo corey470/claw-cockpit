@@ -14,15 +14,22 @@ export function buildChecks({ status, probe, statusText, probeText, config }) {
     ? config.agents.list.find((agent) => agent?.id === 'main')
     : null
   const mainModel = typeof mainAgent?.model === 'string' ? mainAgent.model : mainAgent?.model?.primary
+  const gatewayReachable = isGatewayReachable({ statusText, probeText })
 
   checks.push({
     id: 'gateway',
-    title: probeText.includes('Reachable: yes') ? 'OpenClaw is reachable' : 'Gateway is not answering',
+    title: probeText.includes('Reachable: yes')
+      ? 'OpenClaw is reachable'
+      : gatewayReachable
+        ? 'OpenClaw is reachable through status'
+        : 'Gateway is not answering',
     detail: probeText.includes('Reachable: yes')
       ? 'The local WebSocket gateway answered the cockpit probe.'
-      : probe.error || 'Start or repair the OpenClaw gateway before running agents.',
-    state: probeText.includes('Reachable: yes') ? 'healthy' : 'blocked',
-    command: probeText.includes('Reachable: yes') ? undefined : 'openclaw gateway restart',
+      : gatewayReachable
+        ? 'The gateway probe returned warnings, but status reports the local gateway as reachable.'
+        : probe.error || 'Start or repair the OpenClaw gateway before running agents.',
+    state: probeText.includes('Reachable: yes') ? 'healthy' : gatewayReachable ? 'attention' : 'blocked',
+    command: gatewayReachable ? undefined : 'openclaw gateway restart',
   })
 
   checks.push({
@@ -78,9 +85,13 @@ export function buildCompatibility({ sources, statusText, probeText, paths }) {
   const agentsHelpText = textFrom(agentsHelp)
   const cronHelpText = textFrom(cronHelp)
   const requiredCommands = ['status', 'doctor', 'gateway', 'agents', 'cron', 'plugins', 'security', 'models']
-  const missingCommands = cliHelp.ok
-    ? requiredCommands.filter((command) => !new RegExp(`\\b${command}\\b`).test(cliHelpText))
-    : requiredCommands
+  const commandAvailability = Object.fromEntries(
+    requiredCommands.map((command) => [
+      command,
+      new RegExp(`\\b${command}\\b`).test(cliHelpText) || Boolean(sources.commandHelp?.[command]?.ok),
+    ]),
+  )
+  const missingCommands = requiredCommands.filter((command) => !commandAvailability[command])
   const securitySummary = parseSecuritySummary(statusText)
   const channel = parseTableValue(statusText, 'Channel')
   const update = parseTableValue(statusText, 'Update')
@@ -90,6 +101,7 @@ export function buildCompatibility({ sources, statusText, probeText, paths }) {
   const allowInsecureAuth = statusText.includes('allowInsecureAuth=true')
   const hasAgentAdd = /\badd\b/.test(agentsHelpText)
   const hasCronAdd = /\badd\b/.test(cronHelpText)
+  const gatewayReachable = isGatewayReachable({ statusText, probeText })
   const statusHasExpectedShape =
     statusText.includes('Overview') &&
     statusText.includes('Gateway') &&
@@ -136,11 +148,11 @@ export function buildCompatibility({ sources, statusText, probeText, paths }) {
     },
     {
       id: 'jobs-state',
-      title: jobsRead.ok ? 'Scheduled work registry is readable' : 'Scheduled work registry not found yet',
+      title: jobsRead.ok ? 'Scheduled work registry is readable' : 'No scheduled work registry yet',
       detail: jobsRead.ok
         ? `${paths.cronJobsPath} parsed cleanly.`
-        : 'No local cron registry was found. That is okay if no scheduled work exists yet.',
-      state: jobsRead.ok ? 'healthy' : 'unknown',
+        : 'No local cron registry was found. That is okay while no scheduled work exists yet.',
+      state: 'healthy',
       source: paths.cronJobsPath,
     },
     {
@@ -198,11 +210,17 @@ export function buildCompatibility({ sources, statusText, probeText, paths }) {
     },
     {
       id: 'gateway-contract',
-      title: probe.ok && probeText.includes('Reachable: yes') ? 'Gateway probe contract works' : 'Gateway probe contract changed',
-      detail: probe.ok
+      title: probe.ok && probeText.includes('Reachable: yes')
+        ? 'Gateway probe contract works'
+        : gatewayReachable
+          ? 'Gateway reachable through status fallback'
+          : 'Gateway probe contract changed',
+      detail: probe.ok && probeText.includes('Reachable: yes')
         ? extractLine(probeText, 'Local loopback') || 'Gateway probe responded.'
-        : probe.error || 'Gateway probe did not complete.',
-      state: probe.ok && probeText.includes('Reachable: yes') ? 'healthy' : 'blocked',
+        : gatewayReachable
+          ? 'The gateway probe returned warnings, but status still reports the local gateway.'
+          : probe.error || 'Gateway probe did not complete.',
+      state: probe.ok && probeText.includes('Reachable: yes') ? 'healthy' : gatewayReachable ? 'attention' : 'blocked',
       source: 'openclaw gateway probe',
     },
     {
@@ -239,4 +257,9 @@ export function buildCompatibility({ sources, statusText, probeText, paths }) {
       generatedAt: new Date().toISOString(),
     },
   }
+}
+
+function isGatewayReachable({ statusText, probeText }) {
+  const gatewayStatus = parseTableValue(statusText, 'Gateway')
+  return probeText.includes('Reachable: yes') || /\b(local|reachable)\b/i.test(gatewayStatus)
 }

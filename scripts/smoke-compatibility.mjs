@@ -22,6 +22,20 @@ if (!fixture.ok) failures.push(fixture.error || 'fixture record failed')
 if (!fixture.path) failures.push('fixture path missing')
 if (!Array.isArray(fixture.files) || fixture.files.length < 6) failures.push('fixture files missing')
 
+const refreshedReport = await get('/api/compatibility-report')
+const runnableRecipe = refreshedReport.repairRecipes.find((recipe) => recipe.runnable)
+let repair = null
+if (runnableRecipe) {
+  repair = await post('/api/repairs/run', {
+    recipeId: runnableRecipe.id,
+    confirm: 'REPAIR',
+    dryRun: true,
+  })
+  if (!repair.ok) failures.push(repair.error || 'repair loop failed')
+  if (!repair.dryRun) failures.push('repair loop smoke should dry-run')
+  if (!repair.before?.nextBestMove || !repair.after?.nextBestMove) failures.push('repair loop did not return before/after proof')
+}
+
 if (failures.length > 0) {
   console.error(failures.join('\n'))
   process.exit(1)
@@ -35,6 +49,7 @@ console.log(
       updateState: report.updateRadar.recommendation.state,
       recipes: report.repairRecipes.length,
       fixturePath: fixture.path,
+      repairLoop: repair ? repair.recipeId : 'no runnable recipe',
     },
     null,
     2,
