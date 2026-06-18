@@ -1,9 +1,11 @@
 import { createServer } from 'node:http'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
+import { buildCompatibilityReport } from './compatibilityReport.mjs'
 import { commandCatalog, buildCommandDraft, readAuditLog, runCatalogCommand } from './commandCatalog.mjs'
 import { buildOverview } from './overviewNormalizer.mjs'
 import { defaultOpenClawPaths, readOpenClawSources } from './openclawSources.mjs'
+import { recordFixture } from './fixtureRecorder.mjs'
 import { redactForClient } from './redaction.mjs'
 import {
   buildPluginPackDraft,
@@ -39,6 +41,25 @@ createServer(async (request, response) => {
 
   if (url.pathname === '/api/skills') {
     sendJson(response, 200, await buildSkillWorkshop({ env: process.env, fixtureDir: process.env.COCKPIT_FIXTURE_DIR, paths }))
+    return
+  }
+
+  if (url.pathname === '/api/compatibility-report') {
+    const sources = await readOpenClawSources({
+      env: process.env,
+      fixtureDir: process.env.COCKPIT_FIXTURE_DIR,
+      paths,
+    })
+    sendJson(
+      response,
+      200,
+      await buildCompatibilityReport({
+        sources,
+        paths,
+        env: process.env,
+        fixtureDir: process.env.COCKPIT_FIXTURE_DIR,
+      }),
+    )
     return
   }
 
@@ -114,6 +135,22 @@ createServer(async (request, response) => {
 
   if (url.pathname === '/api/workspaces') {
     sendJson(response, 200, await buildWorkspaceSuggestions({ paths }))
+    return
+  }
+
+  if (url.pathname === '/api/fixtures/record' && request.method === 'POST') {
+    try {
+      assertLocalRequest(request)
+      const body = await readJsonBody(request)
+      const sources = await readOpenClawSources({
+        env: process.env,
+        fixtureDir: process.env.COCKPIT_FIXTURE_DIR,
+        paths,
+      })
+      sendJson(response, 200, await recordFixture({ sources, paths, confirm: body.confirm, env: process.env }))
+    } catch (error) {
+      sendJson(response, 400, { ok: false, error: error instanceof Error ? error.message : String(error) })
+    }
     return
   }
 

@@ -1,0 +1,50 @@
+{
+  "generatedAt": "2026-06-18T00:00:00.000Z",
+  "local": {
+    "version": "2026.5.16-beta.2",
+    "channel": "beta (fixture)",
+    "update": "fixture up to date",
+    "source": "openclaw status --deep"
+  },
+  "repos": [
+    {
+      "role": "upstream",
+      "label": "OpenClaw upstream",
+      "configured": true,
+      "state": "healthy",
+      "url": "https://github.com/example/openclaw.git",
+      "latestTag": "2026.5.16-beta.2",
+      "head": "abc123fixture",
+      "detail": "Latest tag found: 2026.5.16-beta.2."
+    },
+    {
+      "role": "fork",
+      "label": "OpenClaw fork",
+      "configured": true,
+      "state": "healthy",
+      "url": "https://github.com/example/openclaw-fork.git",
+      "latestTag": "2026.5.16-beta.2",
+      "head": "def456fixture",
+      "detail": "Latest tag found: 2026.5.16-beta.2."
+    },
+    {
+      "role": "local",
+      "label": "Local OpenClaw repo",
+      "configured": false,
+      "state": "unknown",
+      "url": "",
+      "latestTag": "",
+      "head": "",
+      "detail": "OPENCLAW_LOCAL_REPO is not configured."
+    }
+  ],
+  "recommendation": {
+    "state": "healthy",
+    "title": "OpenClaw source signals look steady",
+    "detail": "Cockpit can use the local CLI status as the current source truth.",
+    "nextStep": "Run the compatibility contract before changing OpenClaw."
+  },
+  "configured": true,
+  "updateAvailable": false,
+  "newestConfiguredTag": "2026.5.16-beta.2"
+}

@@ -20,6 +20,7 @@ Use these as the adapter contract before depending on OpenClaw UI internals:
 - `~/.openclaw/openclaw.json`
 - `~/.openclaw/cron/jobs.json`
 - local skill folders such as `~/.codex/skills` and `~/.openclaw/skills`
+- configured OpenClaw upstream, fork, or local repo sources when available
 
 When any of these change, the UI should show a drift warning instead of pretending setup is safe.
 
@@ -35,6 +36,9 @@ When any of these change, the UI should show a drift warning instead of pretendi
 - Skill folder conventions can drift between OpenClaw, Codex, and plugin-provided skills.
 - Security posture can change when the Control UI is exposed beyond localhost.
 - Beta channel updates may change behavior several times a day.
+- Repo tags and npm releases may not move at the same time.
+- A local fork can be ahead of the installed CLI or behind upstream.
+- Gateway auth and dashboard launch behavior can change without breaking the gateway itself.
 
 ## Adapter Rules
 
@@ -53,6 +57,9 @@ When any of these change, the UI should show a drift warning instead of pretendi
 - Skill Workshop installs must stay saved-draft-only, require explicit confirmation, and refuse conflicting existing files.
 - Plugin pack creation must stay reviewed-file-only, require explicit confirmation, and refuse conflicting existing files.
 - Workspace suggestions should come from local source truth and should filter empty wrapper folders so beginners choose real projects.
+- Upstream/fork checks must stay read-only unless a future reviewed update command is explicitly added.
+- Fixture recording should save redacted evidence first; copying into committed fixtures is a separate review step.
+- Repair recipes should say when a fix is not runnable yet instead of pretending Cockpit can safely patch everything.
 
 ## Smoke Check
 
@@ -60,6 +67,7 @@ Run this while the dev server is up:
 
 ```bash
 npm run smoke:overview
+npm run smoke:compatibility
 npm run smoke:workspaces
 ```
 
@@ -79,6 +87,14 @@ It checks that `/api/overview` still returns the expected compatibility contract
 
 The workspace smoke check verifies that `/api/workspaces` returns absolute local folder paths, which protects the helper setup flow from blank or relative path choices.
 
+The compatibility smoke check verifies that `/api/compatibility-report` returns:
+
+- local OpenClaw update state
+- configured repo/fork source summaries
+- contract checks for CLI/status/config/gateway shape
+- repair recipes for known drift
+- a redacted fixture recording path
+
 ## UI Copy Rule
 
 Keep beginner words visible first:
@@ -91,5 +107,7 @@ Keep beginner words visible first:
 - Run = reviewed command ID plus validated fields
 - Skill = reusable instructions OpenClaw/Codex can load
 - Plugin pack = grouped skills and metadata written after review
+- Update radar = OpenClaw version, fork, update, and contract drift
+- Fixture = redacted proof of what OpenClaw output looked like
 
 Technical names can appear in command previews and source labels.

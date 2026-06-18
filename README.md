@@ -27,6 +27,10 @@ Make OpenClaw easier to operate without hiding the real system:
 - inventory local skills, draft new `SKILL.md` files, and install reviewed saved drafts
 - write a reviewed plugin pack from saved skill drafts
 - suggest real local workspace folders when setting up helpers
+- compare local OpenClaw against configured upstream/fork sources before updates
+- run compatibility contract checks after OpenClaw changes
+- record redacted fixtures when OpenClaw output drifts
+- translate common drift into repair recipes
 - show history, compatibility, and safety signals
 - keep the adapter open enough for contributors to extend
 
@@ -44,6 +48,7 @@ The sidebar is task-first:
 - `Add reminder` for scheduled OpenClaw work
 - `Build skills` for skill inventory and draft creation
 - `Review runs` for session proof
+- `Update radar` for fork, update, contract, and fixture checks
 - `Safety & drift` for compatibility checks
 
 ## Setup Planner
@@ -69,7 +74,8 @@ For now, replies are local guide rails only. They do not call a helper or change
 7. Use the workspace chips when you want a helper pointed at a real local project folder.
 8. Use `Build skills` when you want to shape OpenClaw with a new reviewed skill draft.
 9. Install a saved skill draft only after the detail panel shows the file and install target you expect.
-10. Use `Safety & drift` after OpenClaw updates to see what the adapter is worried about.
+10. Use `Update radar` before and after OpenClaw updates to compare source signals, run the contract, record a fixture, and review repair recipes.
+11. Use `Safety & drift` after OpenClaw updates to see what the adapter is worried about.
 
 ![Claw Cockpit warning screen](docs/assets/claw-cockpit-fix-warnings.png)
 
@@ -103,6 +109,28 @@ It can:
 
 The install action is intentionally narrow: it only copies a saved draft by skill name after the review drawer, refuses conflicting existing `SKILL.md` files, and marks the saved draft as installed. Plugin pack writing is narrow too: it writes a `.codex-plugin/plugin.json`, a `marketplace-entry.json`, copied saved skill files, and Cockpit metadata only after the user reviews the preview.
 
+## Update Radar
+
+OpenClaw changes quickly, especially on beta. The Update Radar page is built to catch that drift before normal setup work breaks.
+
+It can:
+
+- read the local OpenClaw version, channel, and update signal
+- inspect configured upstream, fork, and local OpenClaw repos
+- run a compatibility contract against the current CLI/status/config shape
+- show repair recipes for known drift patterns
+- record redacted fixtures under `~/.openclaw/claw-cockpit/recorded-fixtures/`
+
+Repo inspection is opt-in through environment variables:
+
+```bash
+OPENCLAW_UPSTREAM_REPO=https://github.com/<owner>/<openclaw-repo>.git
+OPENCLAW_FORK_REPO=https://github.com/<your-user>/<openclaw-fork>.git
+OPENCLAW_LOCAL_REPO=/path/to/local/openclaw
+```
+
+If those are not configured, Cockpit still uses `openclaw status --deep` as local truth and clearly says repo comparison is not active.
+
 ## Run Locally
 
 ```bash
@@ -122,6 +150,7 @@ With the dev server running, check the adapter contract:
 
 ```bash
 npm run smoke:overview
+npm run smoke:compatibility
 npm run smoke:workspaces
 npm run smoke:skills
 npm run smoke:ui
@@ -134,6 +163,8 @@ GitHub Actions runs `npm run ci:smoke` against redacted fixtures, so contributor
 The default posture is review-first:
 
 - `/api/overview` reads OpenClaw status, gateway probe output, `openclaw.json`, and cron jobs.
+- `/api/compatibility-report` returns update radar, contract checks, compatibility scoring, and repair recipes.
+- `/api/fixtures/record` records redacted current OpenClaw output only after explicit local confirmation.
 - setup cards show command previews first.
 - `/api/commands/run` accepts only server-side command IDs, validated fields, and explicit confirmation.
 - `/api/skills/draft` returns draft file content only; it does not write or install skills.
@@ -181,7 +212,7 @@ Architecture decisions live in `docs/adr/`:
 
 ## Current Readiness
 
-Status refreshed on May 20, 2026. Use the badge at the top of this README for the latest GitHub validation.
+Status refreshed on June 18, 2026. Use the badge at the top of this README for the latest GitHub validation.
 
 Claw Cockpit is now ready for real local work as a review-first OpenClaw cockpit:
 
@@ -190,6 +221,10 @@ Claw Cockpit is now ready for real local work as a review-first OpenClaw cockpit
 - helper and reminder setup can be reviewed and run through the safe catalog
 - local skills can be inventoried, reviewed, saved as `SKILL.md` drafts, and installed from saved drafts
 - plugin packs can be previewed and written from saved drafts, including a marketplace entry file
+- Update Radar compares local OpenClaw with configured upstream/fork/local repo sources
+- compatibility contract checks protect the adapter from CLI/status/config drift
+- redacted fixture recording captures new OpenClaw output before parser changes
+- repair recipes translate update drift into safe reviewed next steps
 - gateway restart, deep security audit, main model repair, and Discord plugin install warning fixes are runnable through reviewed command IDs
 - helper setup can start from real workspace suggestions instead of manual path guessing
 - command runs are audit-logged under the local OpenClaw home
@@ -209,4 +244,4 @@ For an agent-control product, that means:
 - make approval and verification part of the main flow
 - keep copy plain enough for a beginner who has never touched OpenClaw config
 - avoid generic AI dashboard filler
-- use task words first: Check OpenClaw, Plan a change, Fix warnings, Create helper, Add reminder, Build skills, Review runs, Safety & drift
+- use task words first: Check OpenClaw, Plan a change, Fix warnings, Create helper, Add reminder, Build skills, Review runs, Update radar, Safety & drift

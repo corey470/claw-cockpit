@@ -7,3 +7,25 @@ export function redactForClient(value) {
     .replace(/(refresh[_-]?token\s*[=:]\s*)([^\s│]+)/gi, '$1[redacted-token]')
     .replace(/-----BEGIN [^-]+PRIVATE KEY-----[\s\S]*?-----END [^-]+PRIVATE KEY-----/g, '[redacted-private-key]')
 }
+
+export function redactJsonForClient(value) {
+  return redactJsonValue(value)
+}
+
+function redactJsonValue(value) {
+  if (Array.isArray(value)) return value.map((item) => redactJsonValue(item))
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        key,
+        isSensitiveKey(key) ? '[redacted-secret]' : redactJsonValue(item),
+      ]),
+    )
+  }
+  if (typeof value === 'string') return redactForClient(value)
+  return value
+}
+
+function isSensitiveKey(key) {
+  return /token|api[_-]?key|secret|password|private[_-]?key|refresh/i.test(key)
+}

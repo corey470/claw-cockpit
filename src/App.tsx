@@ -26,7 +26,7 @@ import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 
 type HealthState = 'healthy' | 'attention' | 'blocked' | 'unknown'
-type SectionId = 'home' | 'chat' | 'doctor' | 'projects' | 'jobs' | 'skills' | 'runs' | 'settings'
+type SectionId = 'home' | 'chat' | 'doctor' | 'projects' | 'jobs' | 'skills' | 'runs' | 'updates' | 'settings'
 
 type ChatMessage = {
   id: string
@@ -123,6 +123,15 @@ type PluginPackSaveResult = {
   error?: string
 }
 
+type FixtureRecordResult = {
+  ok: boolean
+  path?: string
+  files?: string[]
+  savedAt?: string
+  message?: string
+  error?: string
+}
+
 type AgentSummary = {
   id: string
   name: string
@@ -157,6 +166,76 @@ type DoctorCheck = {
 
 type CompatibilityCheck = DoctorCheck & {
   source: string
+  expected?: string
+  observed?: string
+  kind?: string
+}
+
+type UpdateRadarRepo = {
+  role: string
+  label: string
+  configured: boolean
+  state: HealthState
+  url: string
+  latestTag: string
+  head: string
+  detail: string
+}
+
+type UpdateRadar = {
+  generatedAt: string
+  local: {
+    version: string
+    channel: string
+    update: string
+    source: string
+  }
+  repos: UpdateRadarRepo[]
+  recommendation: {
+    state: HealthState
+    title: string
+    detail: string
+    nextStep: string
+  }
+  configured: boolean
+  updateAvailable: boolean
+  newestConfiguredTag: string
+}
+
+type RepairRecipe = {
+  id: string
+  title: string
+  state: HealthState
+  trigger: string
+  outcome: string
+  safeAction: string
+  runnable: boolean
+  commandId?: ReviewDraft['commandId']
+  endpoint?: string
+  confirm?: string
+}
+
+type CompatibilityReport = {
+  generatedAt: string
+  adapterContract: {
+    schemaVersion: string
+    reportName: string
+  }
+  updateRadar: UpdateRadar
+  contract: {
+    generatedAt: string
+    contractVersion: string
+    posture: HealthState
+    summary: string
+    checks: CompatibilityCheck[]
+  }
+  compatibility: Overview['compatibility']
+  repairRecipes: RepairRecipe[]
+  nextBestMove: {
+    state: HealthState
+    title: string
+    detail: string
+  }
 }
 
 type Overview = {
@@ -343,6 +422,47 @@ const emptySkillWorkshop: SkillWorkshop = {
   },
 }
 
+const emptyCompatibilityReport: CompatibilityReport = {
+  generatedAt: '',
+  adapterContract: {
+    schemaVersion: 'unknown',
+    reportName: 'claw-cockpit-openclaw-compatibility',
+  },
+  updateRadar: {
+    generatedAt: '',
+    local: {
+      version: 'unknown',
+      channel: 'unknown',
+      update: 'unknown',
+      source: 'openclaw status --deep',
+    },
+    repos: [],
+    recommendation: {
+      state: 'unknown',
+      title: 'Update radar has not run yet.',
+      detail: 'Refresh the cockpit to inspect OpenClaw update signals.',
+      nextStep: 'Start the local adapter and run the compatibility report.',
+    },
+    configured: false,
+    updateAvailable: false,
+    newestConfiguredTag: '',
+  },
+  contract: {
+    generatedAt: '',
+    contractVersion: 'unknown',
+    posture: 'unknown',
+    summary: 'Contract checks have not run yet.',
+    checks: [],
+  },
+  compatibility: emptyOverview.compatibility,
+  repairRecipes: [],
+  nextBestMove: {
+    state: 'unknown',
+    title: 'Run the compatibility report',
+    detail: 'Cockpit has not checked OpenClaw drift yet.',
+  },
+}
+
 const navItems = [
   { id: 'home', label: 'Check OpenClaw', task: 'Status, warnings, next move', icon: Home },
   { id: 'chat', label: 'Plan a change', task: 'Draft setup before it runs', icon: MessageSquareText },
@@ -351,6 +471,7 @@ const navItems = [
   { id: 'jobs', label: 'Add reminder', task: 'Scheduled OpenClaw work', icon: Clock3 },
   { id: 'skills', label: 'Build skills', task: 'Skill workshop drafts', icon: Sparkles },
   { id: 'runs', label: 'Review runs', task: 'Sessions and proof', icon: Activity },
+  { id: 'updates', label: 'Update radar', task: 'Fork and contract drift', icon: RefreshCw },
   { id: 'settings', label: 'Safety & drift', task: 'Compatibility checks', icon: Settings },
 ] satisfies { id: SectionId; label: string; task: string; icon: typeof Home }[]
 
@@ -389,6 +510,11 @@ const sectionCopy = {
     label: 'Review runs',
     title: 'See what happened and what changed.',
     detail: 'Recent sessions give you proof instead of guesswork.',
+  },
+  updates: {
+    label: 'Update radar',
+    title: 'See what OpenClaw changed before it breaks.',
+    detail: 'Compare local OpenClaw with configured upstream/fork sources, run contract checks, and save redacted fixtures.',
   },
   settings: {
     label: 'Safety & drift',
@@ -563,9 +689,36 @@ function warningRecipe(check: DoctorCheck): Pick<ReviewDraft, 'command' | 'comma
   return null
 }
 
+function recipeDraft(recipe: RepairRecipe): ReviewDraft | null {
+  if (recipe.commandId === 'gateway.restart') {
+    return {
+      title: recipe.title,
+      summary: recipe.outcome,
+      command: 'openclaw gateway restart',
+      commandId: 'gateway.restart',
+      params: {},
+      nextStep: recipe.safeAction,
+    }
+  }
+
+  if (recipe.commandId === 'security.audit.deep') {
+    return {
+      title: recipe.title,
+      summary: recipe.outcome,
+      command: 'openclaw security audit --deep',
+      commandId: 'security.audit.deep',
+      params: {},
+      nextStep: recipe.safeAction,
+    }
+  }
+
+  return null
+}
+
 function App() {
   const [activeSection, setActiveSection] = useState<SectionId>('chat')
   const [overview, setOverview] = useState<Overview>(emptyOverview)
+  const [compatibilityReport, setCompatibilityReport] = useState<CompatibilityReport>(emptyCompatibilityReport)
   const [skillWorkshop, setSkillWorkshop] = useState<SkillWorkshop>(emptySkillWorkshop)
   const [workspaceSuggestions, setWorkspaceSuggestions] = useState<WorkspaceSuggestion[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -584,20 +737,24 @@ function App() {
   const [runResult, setRunResult] = useState<CommandRunResult | null>(null)
   const [isRunningDraft, setIsRunningDraft] = useState(false)
   const [isOpeningOpenClaw, setIsOpeningOpenClaw] = useState(false)
+  const [isRecordingFixture, setIsRecordingFixture] = useState(false)
 
   const refresh = async () => {
     setIsLoading(true)
     setError('')
     try {
-      const [overviewResponse, skillsResponse, workspacesResponse] = await Promise.all([
+      const [overviewResponse, compatibilityResponse, skillsResponse, workspacesResponse] = await Promise.all([
         fetch('/api/overview'),
+        fetch('/api/compatibility-report'),
         fetch('/api/skills'),
         fetch('/api/workspaces'),
       ])
       if (!overviewResponse.ok) throw new Error(`Adapter returned HTTP ${overviewResponse.status}`)
+      if (!compatibilityResponse.ok) throw new Error(`Compatibility report returned HTTP ${compatibilityResponse.status}`)
       if (!skillsResponse.ok) throw new Error(`Skills scan returned HTTP ${skillsResponse.status}`)
       if (!workspacesResponse.ok) throw new Error(`Workspace scan returned HTTP ${workspacesResponse.status}`)
       setOverview((await overviewResponse.json()) as Overview)
+      setCompatibilityReport((await compatibilityResponse.json()) as CompatibilityReport)
       setSkillWorkshop((await skillsResponse.json()) as SkillWorkshop)
       const workspaces = (await workspacesResponse.json()) as { workspaces: WorkspaceSuggestion[] }
       setWorkspaceSuggestions(workspaces.workspaces ?? [])
@@ -610,13 +767,15 @@ function App() {
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([fetch('/api/overview'), fetch('/api/skills'), fetch('/api/workspaces')])
-      .then(async ([overviewResponse, skillsResponse, workspacesResponse]) => {
+    Promise.all([fetch('/api/overview'), fetch('/api/compatibility-report'), fetch('/api/skills'), fetch('/api/workspaces')])
+      .then(async ([overviewResponse, compatibilityResponse, skillsResponse, workspacesResponse]) => {
         if (!overviewResponse.ok) throw new Error(`Adapter returned HTTP ${overviewResponse.status}`)
+        if (!compatibilityResponse.ok) throw new Error(`Compatibility report returned HTTP ${compatibilityResponse.status}`)
         if (!skillsResponse.ok) throw new Error(`Skills scan returned HTTP ${skillsResponse.status}`)
         if (!workspacesResponse.ok) throw new Error(`Workspace scan returned HTTP ${workspacesResponse.status}`)
         return {
           overview: (await overviewResponse.json()) as Overview,
+          compatibility: (await compatibilityResponse.json()) as CompatibilityReport,
           skills: (await skillsResponse.json()) as SkillWorkshop,
           workspaces: ((await workspacesResponse.json()) as { workspaces: WorkspaceSuggestion[] }).workspaces ?? [],
         }
@@ -624,6 +783,7 @@ function App() {
       .then((data) => {
         if (!cancelled) {
           setOverview(data.overview)
+          setCompatibilityReport(data.compatibility)
           setSkillWorkshop(data.skills)
           setWorkspaceSuggestions(data.workspaces)
         }
@@ -721,6 +881,26 @@ function App() {
       setReviewNotice(error instanceof Error ? error.message : 'Could not open OpenClaw from the local adapter.')
     } finally {
       setIsOpeningOpenClaw(false)
+    }
+  }
+
+  const recordFixture = async () => {
+    setIsRecordingFixture(true)
+    setReviewNotice('')
+    try {
+      const response = await fetch('/api/fixtures/record', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ confirm: 'RECORD' }),
+      })
+      const result = (await response.json()) as FixtureRecordResult
+      if (!response.ok || !result.ok) throw new Error(result.error || `Fixture recorder returned HTTP ${response.status}`)
+      setReviewNotice(`Recorded fixture: ${result.path}`)
+      await refresh()
+    } catch (error) {
+      setReviewNotice(error instanceof Error ? error.message : 'Could not record the OpenClaw fixture.')
+    } finally {
+      setIsRecordingFixture(false)
     }
   }
 
@@ -1024,16 +1204,19 @@ function App() {
         ) : (
           <DashboardPage
             activeSection={activeSection}
+            compatibilityReport={compatibilityReport}
             overview={overview}
             onReviewCommand={openReview}
             priorityChecks={priorityChecks}
             onNavigate={setActiveSection}
+            onRecordFixture={recordFixture}
             savedDrafts={savedDrafts}
             skillWorkshop={skillWorkshop}
             workspaceSuggestions={workspaceSuggestions}
             onDraftSkill={draftSkill}
             onInstallSkill={installSkill}
             onDraftPluginPack={draftPluginPack}
+            isRecordingFixture={isRecordingFixture}
           />
         )}
 
@@ -1223,28 +1406,34 @@ function ChatPage({
 
 function DashboardPage({
   activeSection,
+  compatibilityReport,
   overview,
   onReviewCommand,
   priorityChecks,
   onNavigate,
+  onRecordFixture,
   savedDrafts,
   skillWorkshop,
   workspaceSuggestions,
   onDraftSkill,
   onInstallSkill,
   onDraftPluginPack,
+  isRecordingFixture,
 }: {
   activeSection: SectionId
+  compatibilityReport: CompatibilityReport
   overview: Overview
   onReviewCommand: (draft: ReviewDraft) => void
   priorityChecks: DoctorCheck[]
   onNavigate: (section: SectionId) => void
+  onRecordFixture: () => void
   savedDrafts: SavedDraft[]
   skillWorkshop: SkillWorkshop
   workspaceSuggestions: WorkspaceSuggestion[]
   onDraftSkill: (input: SkillDraftInput) => void
   onInstallSkill: (skillName: string) => void
   onDraftPluginPack: (skillNames: string[]) => void
+  isRecordingFixture: boolean
 }) {
   const [selectedProject, setSelectedProject] = useState(projectTemplates[0])
   const [selectedJob, setSelectedJob] = useState(jobTemplates[0])
@@ -1263,6 +1452,9 @@ function DashboardPage({
   const [selectedSkillDraft, setSelectedSkillDraft] = useState('')
   const riskChecks = priorityChecks.filter((check) => check.state === 'blocked' || check.state === 'attention')
   const compatibilityRisks = overview.compatibility.checks.filter(
+    (check) => check.state === 'blocked' || check.state === 'attention',
+  )
+  const contractRisks = compatibilityReport.contract.checks.filter(
     (check) => check.state === 'blocked' || check.state === 'attention',
   )
   const helperCommand = agentPreview(helperName, helperWorkspace)
@@ -1722,6 +1914,153 @@ function DashboardPage({
                   <span>{session.age}</span>
                 </div>
               ))}
+            </div>
+          </article>
+        </section>
+      </>
+    )
+  }
+
+  if (activeSection === 'updates') {
+    return (
+      <>
+        <ProofStrip overview={overview} />
+        <section className="handled-brief update-brief" aria-label="OpenClaw update radar">
+          <div>
+            <span>{stateLabel(compatibilityReport.nextBestMove.state)}</span>
+            <strong>{compatibilityReport.nextBestMove.title}</strong>
+            <p>{compatibilityReport.nextBestMove.detail}</p>
+          </div>
+          <div className="brief-actions">
+            <button type="button" onClick={onRecordFixture} disabled={isRecordingFixture}>
+              <ClipboardList size={16} />
+              {isRecordingFixture ? 'Recording fixture' : 'Record fixture'}
+            </button>
+            {contractRisks.length > 0 && (
+              <button type="button" onClick={() => onNavigate('settings')}>
+                <ShieldCheck size={16} />
+                Review drift
+              </button>
+            )}
+          </div>
+        </section>
+
+        <section className="task-grid two-column">
+          <article className="panel wide-panel">
+            <PanelHeader
+              icon={<RefreshCw size={19} />}
+              title="OpenClaw update radar"
+              action={stateLabel(compatibilityReport.updateRadar.recommendation.state)}
+            />
+            <div className="detail-grid update-detail-grid">
+              <div>
+                <span>Local version</span>
+                <strong>{compatibilityReport.updateRadar.local.version}</strong>
+                <p>{compatibilityReport.updateRadar.local.channel}</p>
+              </div>
+              <div>
+                <span>Update signal</span>
+                <strong>{compatibilityReport.updateRadar.updateAvailable ? 'Update visible' : 'No update flagged'}</strong>
+                <p>{compatibilityReport.updateRadar.local.update}</p>
+              </div>
+              <div>
+                <span>Configured repo tag</span>
+                <strong>{compatibilityReport.updateRadar.newestConfiguredTag || 'Not configured'}</strong>
+                <p>{compatibilityReport.updateRadar.configured ? 'Repo comparison is active.' : 'Add upstream or fork repo env settings.'}</p>
+              </div>
+            </div>
+            <div className="plain-steps">
+              <div>
+                <strong>{compatibilityReport.updateRadar.recommendation.title}</strong>
+                <p>{compatibilityReport.updateRadar.recommendation.detail}</p>
+              </div>
+              <div>
+                <strong>Next safe move</strong>
+                <p>{compatibilityReport.updateRadar.recommendation.nextStep}</p>
+              </div>
+            </div>
+          </article>
+
+          <article className="panel">
+            <PanelHeader icon={<FolderGit2 size={19} />} title="Repo and fork sources" action={`${compatibilityReport.updateRadar.repos.length} checked`} />
+            <div className="source-card-list">
+              {compatibilityReport.updateRadar.repos.map((repo) => (
+                <div className="source-card" key={repo.role}>
+                  <div>
+                    <span className={`check-dot ${repo.state}`} />
+                    <strong>{repo.label}</strong>
+                  </div>
+                  <p>{repo.detail}</p>
+                  <small>{repo.url || 'Not configured'}</small>
+                  {(repo.latestTag || repo.head) && (
+                    <div className="source-meta">
+                      <span>{repo.latestTag || 'no tag'}</span>
+                      <span>{repo.head || 'no head'}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </article>
+        </section>
+
+        <section className="task-grid two-column">
+          <article className="panel wide-panel">
+            <PanelHeader
+              icon={<ListChecks size={19} />}
+              title="Compatibility contract"
+              action={`${contractRisks.length} to review`}
+            />
+            <p className="panel-copy">{compatibilityReport.contract.summary}</p>
+            <div className="contract-table">
+              {compatibilityReport.contract.checks.map((check) => (
+                <div className="contract-row" key={check.id}>
+                  <span className={`check-dot ${check.state}`} />
+                  <div>
+                    <strong>{check.title}</strong>
+                    <p>{check.detail}</p>
+                    <small>{check.source}</small>
+                  </div>
+                  <div>
+                    <span>{check.expected || 'Expected shape'}</span>
+                    <small>{check.observed || 'No observation yet'}</small>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="panel">
+            <PanelHeader icon={<Wrench size={19} />} title="Repair cookbook" action={`${compatibilityReport.repairRecipes.length} recipes`} />
+            <div className="recipe-list">
+              {compatibilityReport.repairRecipes.length === 0 ? (
+                <div className="empty-state">No repair recipe is needed from the current report.</div>
+              ) : (
+                compatibilityReport.repairRecipes.map((recipe) => {
+                  const draft = recipeDraft(recipe)
+                  return (
+                    <div className="recipe-card" key={recipe.id}>
+                      <div>
+                        <span className={`check-dot ${recipe.state}`} />
+                        <strong>{recipe.title}</strong>
+                      </div>
+                      <p>{recipe.trigger}</p>
+                      <small>{recipe.safeAction}</small>
+                      {draft ? (
+                        <button type="button" onClick={() => onReviewCommand(draft)}>
+                          <ClipboardList size={15} />
+                          Review repair
+                        </button>
+                      ) : recipe.endpoint === '/api/fixtures/record' ? (
+                        <button type="button" onClick={onRecordFixture} disabled={isRecordingFixture}>
+                          <ClipboardList size={15} />
+                          {isRecordingFixture ? 'Recording' : 'Record fixture'}
+                        </button>
+                      ) : null}
+                    </div>
+                  )
+                })
+              )}
             </div>
           </article>
         </section>

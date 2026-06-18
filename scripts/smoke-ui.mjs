@@ -29,6 +29,7 @@ try {
     [/Add reminder/i, /Turn reminders into safe scheduled work/i],
     [/Build skills/i, /Shape OpenClaw with beginner-friendly skills/i],
     [/Review runs/i, /See what happened and what changed/i],
+    [/Update radar/i, /See what OpenClaw changed before it breaks/i],
     [/Safety & drift/i, /Keep control without guessing/i],
   ]
 
@@ -73,6 +74,8 @@ try {
   await mobile.getByRole('heading', { name: /Check what needs attention first/i }).waitFor()
   await mobile.getByRole('button', { name: /Build skills/i }).click()
   await mobile.getByRole('heading', { name: /Shape OpenClaw with beginner-friendly skills/i }).waitFor()
+  await mobile.getByRole('button', { name: /Update radar/i }).click()
+  await mobile.getByRole('heading', { name: /See what OpenClaw changed before it breaks/i }).waitFor()
   const mobileOverflow = await mobile.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
   )

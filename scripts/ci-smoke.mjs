@@ -20,6 +20,7 @@ const env = {
   COCKPIT_API_TARGET: `http://127.0.0.1:${apiPort}`,
   COCKPIT_OVERVIEW_URL: `http://127.0.0.1:${apiPort}/api/overview`,
   COCKPIT_COMMAND_URL: `http://127.0.0.1:${apiPort}`,
+  COCKPIT_COMPATIBILITY_URL: `http://127.0.0.1:${apiPort}`,
   COCKPIT_SKILLS_URL: `http://127.0.0.1:${apiPort}`,
   COCKPIT_WORKSPACES_URL: `http://127.0.0.1:${apiPort}`,
   COCKPIT_UI_URL: `http://127.0.0.1:${webPort}`,
@@ -34,6 +35,7 @@ try {
   await waitFor(`${env.COCKPIT_OVERVIEW_URL}`)
   await waitFor(`${env.COCKPIT_UI_URL}`)
   await run(process.execPath, [join(root, 'scripts', 'smoke-overview.mjs')], env)
+  await run(process.execPath, [join(root, 'scripts', 'smoke-compatibility.mjs')], env)
   await run(process.execPath, [join(root, 'scripts', 'smoke-workspaces.mjs')], env)
   await run(process.execPath, [join(root, 'scripts', 'smoke-commands.mjs')], env)
   await run(process.execPath, [join(root, 'scripts', 'smoke-skills.mjs')], env)

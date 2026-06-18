@@ -18,11 +18,17 @@ Browser UI
 - `server/openclawSources.mjs` reads live OpenClaw or fixture sources.
 - `server/openclawParsers.mjs` turns CLI/config text into smaller facts.
 - `server/compatibilityScoring.mjs` scores drift, security, and command-surface risk.
+- `server/compatibilityReport.mjs` combines update radar, contract checks, compatibility scoring, and repair recipes.
+- `server/contractTester.mjs` runs the explicit OpenClaw compatibility contract.
+- `server/updateRadar.mjs` inspects local OpenClaw update state plus configured upstream/fork/local repo sources.
+- `server/fixtureRecorder.mjs` records redacted OpenClaw evidence for parser and fixture updates.
+- `server/repairRecipes.mjs` turns known drift patterns into beginner-readable next steps.
 - `server/overviewNormalizer.mjs` returns the browser-safe overview contract.
 - `server/commandCatalog.mjs` owns runnable command IDs, validation, dry-run mode, execution, and audit logs.
 - `server/skillWorkshop.mjs` reads local skills, drafts `SKILL.md` previews, saves reviewed drafts under the Cockpit draft folder, installs saved drafts, and writes reviewed plugin packs.
 - `server/workspaces.mjs` suggests local project folders for helper setup without letting the browser provide commands.
 - `scripts/smoke-overview.mjs` checks the adapter contract.
+- `scripts/smoke-compatibility.mjs` checks the update radar, contract report, repair recipes, and fixture recorder.
 - `scripts/smoke-ui.mjs` checks desktop/mobile rendering and the review drawer.
 - `scripts/smoke-commands.mjs` checks catalog preview/run behavior, including warning fix IDs, without changing live state.
 - `scripts/smoke-skills.mjs` checks skill inventory, draft generation, plugin-pack writing, and saved-draft install behavior.
@@ -37,6 +43,8 @@ Browser UI
 - Skill drafts can be saved only under `~/.openclaw/claw-cockpit/skill-drafts/`.
 - Skill install can only copy a saved draft to `~/.codex/skills` or `COCKPIT_INSTALL_SKILL_DIR`, requires explicit confirmation, and refuses conflicting existing files.
 - Plugin pack creation writes only reviewed package files under the Cockpit plugin-pack folder or `COCKPIT_PLUGIN_PACK_DIR`; conflicting existing files are refused. Saved packs include `marketplace-entry.json` for later marketplace registration.
+- Fixture recording writes redacted current OpenClaw output under `~/.openclaw/claw-cockpit/recorded-fixtures/` or `COCKPIT_RECORDED_FIXTURE_DIR`; committed fixtures still require human review.
+- Upstream/fork inspection is read-only and opt-in through `OPENCLAW_UPSTREAM_REPO`, `OPENCLAW_FORK_REPO`, and `OPENCLAW_LOCAL_REPO`.
 - Warning fixes become runnable only after they get a command catalog ID. Gateway restart, deep security audit, main model repair, and Discord plugin install are allowlisted.
 - OpenClaw CLI output should be treated as a changing source, not a permanent API.
 
@@ -48,6 +56,11 @@ The adapter is split into:
 - `openclawParsers`: text and JSON parsing
 - `overviewNormalizer`: beginner-facing output
 - `compatibilityScoring`: drift and safety checks
+- `compatibilityReport`: update radar plus contract summary for the Update Radar page
+- `contractTester`: explicit checks for CLI/status/config/gateway shape
+- `updateRadar`: local update signal and configured repo/fork inspection
+- `fixtureRecorder`: redacted output snapshots for future parser fixes
+- `repairRecipes`: known drift explanations and reviewed next steps
 - `commandCatalog`: capability-backed command drafts and safe execution
 - `skillWorkshop`: local skill inventory, draft generation, safe draft persistence, saved-draft install, and plugin-pack writing
 - `workspaces`: local folder discovery for beginner-friendly helper setup

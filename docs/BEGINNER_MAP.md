@@ -15,6 +15,7 @@ This is what people see. Keep it task-first:
 - Add reminder
 - Build skills
 - Review runs
+- Update radar
 - Safety & drift
 
 The browser should not know how to run OpenClaw commands directly.
@@ -27,12 +28,17 @@ Paths:
 - `server/openclawSources.mjs`
 - `server/openclawParsers.mjs`
 - `server/compatibilityScoring.mjs`
+- `server/compatibilityReport.mjs`
+- `server/contractTester.mjs`
+- `server/updateRadar.mjs`
+- `server/fixtureRecorder.mjs`
+- `server/repairRecipes.mjs`
 - `server/overviewNormalizer.mjs`
 - `server/commandCatalog.mjs`
 - `server/skillWorkshop.mjs`
 - `server/workspaces.mjs`
 
-This is the translator between OpenClaw and the UI. It reads the OpenClaw CLI, gateway, config, and reminder files, then sends the browser a safer summary.
+This is the translator between OpenClaw and the UI. It reads the OpenClaw CLI, gateway, config, reminder files, update signals, and configured repo/fork sources, then sends the browser a safer summary.
 
 It also reads local skill folders, creates skill drafts, saves reviewed drafts under the Cockpit draft folder, installs saved drafts through a narrow server path, writes reviewed plugin packs, and suggests local project folders for helper setup.
 
@@ -51,6 +57,7 @@ npm run ci:smoke
 Paths:
 
 - `scripts/smoke-overview.mjs`
+- `scripts/smoke-compatibility.mjs`
 - `scripts/smoke-ui.mjs`
 - `scripts/smoke-commands.mjs`
 - `scripts/smoke-skills.mjs`
@@ -65,6 +72,7 @@ Run:
 npm run lint
 npm run build
 npm run smoke:overview
+npm run smoke:compatibility
 npm run smoke:workspaces
 npm run smoke:skills
 npm run smoke:ui
